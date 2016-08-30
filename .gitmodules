@@ -1,0 +1,7 @@
+[submodule "modules/aquavaria_branding"]
+	path = modules/aquavaria_branding
+	url = git@github.com:tomasbedrich/aquavaria-eshop-module.git
+    ignore = dirty
+[submodule "themes/aquavaria"]
+	path = themes/aquavaria
+	url = git@github.com:tomasbedrich/aquavaria-eshop-theme.git
