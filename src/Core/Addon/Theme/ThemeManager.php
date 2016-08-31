@@ -306,15 +306,15 @@ class ThemeManager implements AddonManagerInterface
 
             foreach (iterator_to_array($module_dirs) as $dir) {
                 $destination = $module_root_dir.basename($dir->getFileName());
-                if (!$this->filesystem->exists($destination)) {
-                    $this->filesystem->mkdir($destination);
-                    $this->filesystem->mirror(
+                if (!$this->fs->exists($destination)) {
+                    $this->fs->mkdir($destination);
+                    $this->fs->mirror(
                         $dir->getPathName(),
                         $destination
                     );
                 }
             }
-            $this->filesystem->remove($modules_parent_dir);
+            $this->fs->remove($modules_parent_dir);
         }
 
         $themePath = $this->appConfiguration->get('_PS_ALL_THEMES_DIR_').$theme_name;
