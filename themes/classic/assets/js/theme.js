@@ -16755,10 +16755,12 @@
 	    }
 	    imageScrollBox();
 	    (0, _jquery2['default'])((0, _jquery2['default'])('.tabs .nav-link.active').attr('href')).addClass('active').removeClass('fade');
+	    (0, _jquery2['default'])('.js-product-images-modal').replaceWith(event.product_images_modal);
 	  });
 	
 	  function coverImage() {
 	    (0, _jquery2['default'])('.js-thumb').on('click', function (event) {
+	      (0, _jquery2['default'])('.js-modal-product-cover').attr('src', (0, _jquery2['default'])(event.target).data('image-large-src'));
 	      (0, _jquery2['default'])('.selected').removeClass('selected');
 	      (0, _jquery2['default'])(event.target).addClass('selected');
 	      (0, _jquery2['default'])('.js-qv-product-cover').prop('src', (0, _jquery2['default'])(event.currentTarget).data('image-large-src'));
@@ -17154,8 +17156,17 @@
 	    key: 'init',
 	    value: function init() {
 	      (0, _jquery2['default'])('.js-product-miniature').each(function (index, element) {
-	        if ((0, _jquery2['default'])(element).find('.discount-percentage').length) {
-	          (0, _jquery2['default'])(element).find('.new').remove();
+	        var FLAG_MARGIN = 10;
+	        var $percent = (0, _jquery2['default'])(element).find('.discount-percentage');
+	        var $onsale = (0, _jquery2['default'])(element).find('.on-sale');
+	        var $new = (0, _jquery2['default'])(element).find('.new');
+	        if ($percent.length) {
+	          $new.css('top', $percent.height() * 2 + FLAG_MARGIN);
+	          $percent.css('top', -(0, _jquery2['default'])('.thumbnail-container').height() + (0, _jquery2['default'])('.product-description').height() + FLAG_MARGIN);
+	        }
+	        if ($onsale.length) {
+	          $percent.css('top', parseFloat($percent.css('top')) + $onsale.height() + FLAG_MARGIN);
+	          $new.css('top', $percent.height() * 2 + $onsale.height() + FLAG_MARGIN * 2);
 	        }
 	        if ((0, _jquery2['default'])(element).find('.color').length > 5) {
 	          (function () {
@@ -17212,8 +17223,11 @@
 	      var _this = this;
 	
 	      var MAX_THUMBS = 5;
+	      var FLAG_MARGIN = 10;
 	      var $arrows = (0, _jquery2['default'])('.js-modal-arrows');
 	      var $thumbnails = (0, _jquery2['default'])('.js-modal-product-images');
+	      var $onsale = (0, _jquery2['default'])('.on-sale');
+	
 	      (0, _jquery2['default'])('.js-modal-thumb').on('click', function (event) {
 	        if ((0, _jquery2['default'])('.js-modal-thumb').hasClass('selected')) {
 	          (0, _jquery2['default'])('.js-modal-thumb').removeClass('selected');
@@ -17223,7 +17237,9 @@
 	        (0, _jquery2['default'])('.js-modal-product-cover').attr('title', (0, _jquery2['default'])(event.target).attr('title'));
 	        (0, _jquery2['default'])('.js-modal-product-cover').attr('alt', (0, _jquery2['default'])(event.target).attr('alt'));
 	      });
-	
+	      if ($onsale.length && (0, _jquery2['default'])('#product').length) {
+	        (0, _jquery2['default'])('.new').css('top', $onsale.height() + FLAG_MARGIN);
+	      }
 	      if ((0, _jquery2['default'])('.js-modal-product-images li').length <= MAX_THUMBS) {
 	        $arrows.css('opacity', '.2');
 	      } else {

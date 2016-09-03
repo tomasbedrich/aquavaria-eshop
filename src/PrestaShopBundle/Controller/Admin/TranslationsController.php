@@ -27,6 +27,7 @@
 namespace PrestaShopBundle\Controller\Admin;
 
 use Doctrine\Common\Util\Inflector;
+use PrestaShop\TranslationToolsBundle\Translation\Extractor\Util\Flattenizer;
 use PrestashopBundle\Entity\Translation;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 use Symfony\Component\Filesystem\Filesystem;
@@ -90,28 +91,42 @@ class TranslationsController extends FrameworkBundleAdminController
     public function extractThemeAction(Request $request)
     {
         $themeName = $request->request->get('theme-name');
-        $locale = $request->request->get('iso_code');
+        $locale = $this
+            ->getDoctrine()
+            ->getRepository('PrestaShopBundle:Lang')
+            ->findOneByIsoCode($request->request->get('iso_code'))
+            ->getLocale()
+        ;
 
         $theme = $this->get('prestashop.core.admin.theme.repository')
             ->getInstanceByName($themeName)
         ;
 
+        $tmpFolderPath = $this->get('kernel')->getCacheDir().'/'.$themeName.'-tmp';
         $folderPath = $this->get('kernel')->getCacheDir().'/'.$themeName;
-        $zipFile = $folderPath.'.zip';
+
+        $zipFile = $folderPath.'.'.$locale.'.zip';
 
         // create the directory
         $fs = new Filesystem();
         $fs->mkdir($folderPath);
+        $fs->mkdir($tmpFolderPath);
 
         $themeExtractor = $this->get('prestashop.translations.theme_extractor');
         $themeExtractor
-            ->setOutputPath($folderPath)
+            ->setOutputPath($tmpFolderPath)
             ->extract($theme, $locale)
         ;
+
+        Flattenizer::flatten($tmpFolderPath.'/'.$locale, $folderPath.'/'.$locale, $locale);
 
         $this->get('prestashop.utils.zip_manager')->createArchive($zipFile, $folderPath);
 
         $response = new BinaryFileResponse($zipFile);
+        $response->deleteFileAfterSend(true);
+
+        $fs->remove($tmpFolderPath);
+        $fs->remove($folderPath);
 
         return $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT);
     }
@@ -193,12 +208,35 @@ class TranslationsController extends FrameworkBundleAdminController
      */
     protected function getTranslationsCatalogue(Request $request)
     {
-        $lang = $request->request->get('lang');
+        $lang = $request->get('lang');
+        $type = $request->get('type');
+        $theme = $request->get('selected-theme');
 
         $translator = $this->container->get('translator');
 
+        $factory = ($theme !== 'classic' && $theme !== null) ?
+            $this->get('ps.theme_translations_factory') :
+            $this->get('ps.translations_factory')
+        ;
+
         $locale = $this->langToLocale($lang);
 
+        if (!is_null($theme)) {
+            $this->synchronizeTheme($theme, $locale);
+            if ('classic' === $theme) {
+                $type = 'front';
+            } else {
+                $type = $theme;
+            }
+        }
+
+        $translations = $factory->createTranslationsArray($type, $locale);
+
+        if (!is_null($translations)) {
+            return $translations;
+        }
+
+        // if type is not found, return all keys
         $finder = new Finder();
         $translationFiles = $finder->files()->in($this->getResourcesDirectory().'/translations/'.$locale);
 
@@ -342,5 +380,29 @@ class TranslationsController extends FrameworkBundleAdminController
         }, $translations);
 
         return $translationsMap;
+    }
+
+    private function synchronizeTheme($themeName, $locale)
+    {
+        $theme = $this
+            ->get('prestashop.core.admin.theme.repository')
+            ->getInstanceByName($themeName)
+        ;
+
+        $path = $this->getParameter('themes_dir').'/'.$themeName.'/translations';
+        $this->get('filesystem')->remove($path);
+        $this->get('filesystem')->mkdir($path);
+
+        $this->get('prestashop.translations.theme_extractor')
+            ->setOutputPath($path)
+            ->extract($theme, $locale)
+        ;
+
+        $translationFilesPath = $path.'/'.$locale;
+        Flattenizer::flatten($translationFilesPath, $translationFilesPath, $locale, false);
+
+        foreach ($this->get('finder')->directories()->depth('== 0')->in($translationFilesPath) as $folder) {
+            $this->get('filesystem')->remove($folder);
+        }
     }
 }
