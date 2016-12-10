@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -173,6 +173,7 @@ class HelperOptionsCore extends Helper
 
                 // Fill values for all languages for all lang fields
                 if (substr($field['type'], -4) == 'Lang') {
+                    $field['value'] = array();
                     foreach ($languages as $language) {
                         if ($field['type'] == 'textLang') {
                             $value = Tools::getValue($key.'_'.$language['id_lang'], Configuration::get($key, $language['id_lang']));
@@ -181,7 +182,11 @@ class HelperOptionsCore extends Helper
                         } elseif ($field['type'] == 'selectLang') {
                             $value = Configuration::get($key, $language['id_lang']);
                         }
-                        $field['languages'][$language['id_lang']] = $value;
+                        if (isset($value)) {
+                            $field['languages'][$language['id_lang']] = $value;
+                        } else {
+                            $field['languages'][$language['id_lang']] = '';
+                        }
                         $field['value'][$language['id_lang']] = $this->getOptionValue($key.'_'.strtoupper($language['iso_code']), $field);
                     }
                 }

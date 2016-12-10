@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2016 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,10 +18,10 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author     PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2016 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShopBundle\Translation\Provider;
@@ -35,7 +35,10 @@ class BackOfficeProvider extends AbstractProvider implements UseDefaultCatalogue
      */
     public function getTranslationDomains()
     {
-        return array('Admin%');
+        return array(
+            '^Admin*',
+            '^Modules(.*)Admin',
+        );
     }
 
     /**
@@ -43,7 +46,10 @@ class BackOfficeProvider extends AbstractProvider implements UseDefaultCatalogue
      */
     public function getFilters()
     {
-        return array('Admin*');
+        return array(
+            '#^Admin*#',
+            '#^Modules(.*)Admin#',
+        );
     }
 
     /**
@@ -77,7 +83,8 @@ class BackOfficeProvider extends AbstractProvider implements UseDefaultCatalogue
         return $defaultCatalogue;
     }
 
-    /**{@inheritdoc}
+    /**
+     * {@inheritdoc}
      */
     public function getDefaultResourceDirectory()
     {

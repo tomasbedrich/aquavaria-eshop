@@ -1,11 +1,36 @@
 <?php
+/**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
+
 
 namespace PrestaShopBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * AdminFilter
+ * AdminFilter.
  *
  * @ORM\Table(uniqueConstraints={@ORM\UniqueConstraint(name="admin_filter_search_idx", columns={"employee", "shop", "controller", "action"})})
  * @ORM\Entity
@@ -13,7 +38,7 @@ use Doctrine\ORM\Mapping as ORM;
 class AdminFilter
 {
     /**
-     * @var integer
+     * @var int
      *
      * @ORM\Column(name="id", type="integer")
      * @ORM\Id
@@ -22,14 +47,14 @@ class AdminFilter
     private $id;
 
     /**
-     * @var integer
+     * @var int
      *
      * @ORM\Column(name="employee", type="integer")
      */
     private $employee;
 
     /**
-     * @var integer
+     * @var int
      *
      * @ORM\Column(name="shop", type="integer")
      */
@@ -56,12 +81,10 @@ class AdminFilter
      */
     private $filter;
 
-
-
     /**
-     * Get id
+     * Get id.
      *
-     * @return integer
+     * @return int
      */
     public function getId()
     {
@@ -69,9 +92,9 @@ class AdminFilter
     }
 
     /**
-     * Set employee
+     * Set employee.
      *
-     * @param integer $employee
+     * @param int $employee
      *
      * @return AdminFilter
      */
@@ -83,9 +106,9 @@ class AdminFilter
     }
 
     /**
-     * Get employee
+     * Get employee.
      *
-     * @return integer
+     * @return int
      */
     public function getEmployee()
     {
@@ -93,9 +116,9 @@ class AdminFilter
     }
 
     /**
-     * Set shop
+     * Set shop.
      *
-     * @param integer $shop
+     * @param int $shop
      *
      * @return AdminFilter
      */
@@ -107,9 +130,9 @@ class AdminFilter
     }
 
     /**
-     * Get shop
+     * Get shop.
      *
-     * @return integer
+     * @return int
      */
     public function getShop()
     {
@@ -117,7 +140,7 @@ class AdminFilter
     }
 
     /**
-     * Set controller
+     * Set controller.
      *
      * @param string $controller
      *
@@ -131,7 +154,7 @@ class AdminFilter
     }
 
     /**
-     * Get controller
+     * Get controller.
      *
      * @return string
      */
@@ -141,7 +164,7 @@ class AdminFilter
     }
 
     /**
-     * Set action
+     * Set action.
      *
      * @param string $action
      *
@@ -155,7 +178,7 @@ class AdminFilter
     }
 
     /**
-     * Get action
+     * Get action.
      *
      * @return string
      */
@@ -165,7 +188,7 @@ class AdminFilter
     }
 
     /**
-     * Set filter
+     * Set filter.
      *
      * @param string $filter
      *
@@ -179,7 +202,7 @@ class AdminFilter
     }
 
     /**
-     * Get filter
+     * Get filter.
      *
      * @return string
      */
@@ -218,11 +241,13 @@ class AdminFilter
      *
      * The data is decoded and filled with empty strings if there is no value on each entry
      * .
+     *
      * @return array
      */
     public function getProductCatalogFilter()
     {
         $decoded = json_decode($this->getFilter(), true);
+
         return array_merge(
             $this->getProductCatalogEmptyFilter(),
             $decoded
@@ -235,7 +260,8 @@ class AdminFilter
      * Filters input data to keep only Product catalog filters, and encode it.
      *
      * @param $filter
-     * @return AdminFilter tis object for fluent chaining.
+     *
+     * @return AdminFilter tis object for fluent chaining
      */
     public function setProductCatalogFilter($filter)
     {
@@ -243,6 +269,79 @@ class AdminFilter
             $filter,
             $this->getProductCatalogEmptyFilter()
         );
+        $filter = self::sanitizeFilterParameters($filter);
+
         return $this->setFilter(json_encode($filter));
+    }
+
+    /**
+     * Sanitize filter parameters.
+     *
+     * @param $filter
+     *
+     * @return mixed
+     */
+    public static function sanitizeFilterParameters(array $filter)
+    {
+        $filterMinMax = function ($filter) {
+            return function ($subject) use ($filter) {
+                $operator = null;
+
+                if (false !== strpos($subject, '<=')) {
+                    $operator = '<=';
+                }
+
+                if (false !== strpos($subject, '>=')) {
+                    $operator = '>=';
+                }
+
+                if (is_null($operator)) {
+                    $pattern = '#BETWEEN (?P<min>\d+\.?\d*) AND (?P<max>\d+\.?\d*)#';
+                    if (0 === preg_match($pattern, $subject, $matches)) {
+                        return '';
+                    }
+
+                    return sprintf('BETWEEN %f AND %f', $matches['min'], $matches['max']);
+                } else {
+                    $subjectWithoutOperator = str_replace($operator, '', $subject);
+
+                    $flag = FILTER_DEFAULT;
+                    if ($filter === FILTER_SANITIZE_NUMBER_FLOAT) {
+                        $flag = FILTER_FLAG_ALLOW_FRACTION;
+                    }
+
+                    $filteredSubjectWithoutOperator = filter_var($subjectWithoutOperator, $filter, $flag);
+                    if (!$filteredSubjectWithoutOperator) {
+                        $filteredSubjectWithoutOperator = 0;
+                    }
+
+                    return $operator.$filteredSubjectWithoutOperator;
+                }
+            };
+        };
+
+        return filter_var_array($filter, array(
+            'filter_category' => FILTER_SANITIZE_NUMBER_INT,
+            'filter_column_id_product' => array(
+                'filter' => FILTER_CALLBACK,
+                'options' => $filterMinMax(FILTER_SANITIZE_NUMBER_INT),
+            ),
+            'filter_column_name' => FILTER_SANITIZE_STRING,
+            'filter_column_reference' => FILTER_SANITIZE_STRING,
+            'filter_column_name_category' => FILTER_SANITIZE_STRING,
+            'filter_column_price' => array(
+                'filter' => FILTER_CALLBACK,
+                'options' => $filterMinMax(FILTER_SANITIZE_NUMBER_FLOAT),
+            ),
+            'filter_column_sav_quantity' => array(
+                'filter' => FILTER_CALLBACK,
+                'options' => $filterMinMax(FILTER_SANITIZE_NUMBER_INT),
+            ),
+            'filter_column_active' => FILTER_SANITIZE_NUMBER_INT,
+            'last_offset' => FILTER_SANITIZE_NUMBER_INT,
+            'last_limit' => FILTER_SANITIZE_NUMBER_INT,
+            'last_orderBy' => FILTER_SANITIZE_STRING,
+            'last_sortOrder' => FILTER_SANITIZE_STRING,
+        ));
     }
 }

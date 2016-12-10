@@ -100,7 +100,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
-	 * jQuery JavaScript Library v2.2.2
+	 * jQuery JavaScript Library v2.2.4
 	 * http://jquery.com/
 	 *
 	 * Includes Sizzle.js
@@ -110,7 +110,7 @@
 	 * Released under the MIT license
 	 * http://jquery.org/license
 	 *
-	 * Date: 2016-03-17T17:51Z
+	 * Date: 2016-05-20T17:23Z
 	 */"use strict";(function(global,factory){if(typeof module === "object" && typeof module.exports === "object"){ // For CommonJS and CommonJS-like environments where a proper `window`
 	// is present, execute the factory and get jQuery.
 	// For environments that do not have a `window` with a `document`
@@ -124,7 +124,7 @@
 	// the stack via arguments.caller.callee and Firefox dies if
 	// you try to trace through "use strict" call chains. (#13335)
 	//"use strict";
-	var arr=[];var document=window.document;var _slice=arr.slice;var concat=arr.concat;var push=arr.push;var indexOf=arr.indexOf;var class2type={};var toString=class2type.toString;var hasOwn=class2type.hasOwnProperty;var support={};var version="2.2.2", // Define a local copy of jQuery
+	var arr=[];var document=window.document;var _slice=arr.slice;var concat=arr.concat;var push=arr.push;var indexOf=arr.indexOf;var class2type={};var toString=class2type.toString;var hasOwn=class2type.hasOwnProperty;var support={};var version="2.2.4", // Define a local copy of jQuery
 	jQuery=function jQuery(selector,context){ // The jQuery object is actually just the init constructor 'enhanced'
 	// Need init if jQuery is called (just allow error to be thrown if not included)
 	return new jQuery.fn.init(selector,context);}, // Support: Android<4.1
@@ -999,7 +999,7 @@
 	this.timeStamp = src && src.timeStamp || jQuery.now(); // Mark it as fixed
 	this[jQuery.expando] = true;}; // jQuery.Event is based on DOM3 Events as specified by the ECMAScript Language Binding
 	// http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
-	jQuery.Event.prototype = {constructor:jQuery.Event,isDefaultPrevented:returnFalse,isPropagationStopped:returnFalse,isImmediatePropagationStopped:returnFalse,preventDefault:function preventDefault(){var e=this.originalEvent;this.isDefaultPrevented = returnTrue;if(e){e.preventDefault();}},stopPropagation:function stopPropagation(){var e=this.originalEvent;this.isPropagationStopped = returnTrue;if(e){e.stopPropagation();}},stopImmediatePropagation:function stopImmediatePropagation(){var e=this.originalEvent;this.isImmediatePropagationStopped = returnTrue;if(e){e.stopImmediatePropagation();}this.stopPropagation();}}; // Create mouseenter/leave events using mouseover/out and event-time checks
+	jQuery.Event.prototype = {constructor:jQuery.Event,isDefaultPrevented:returnFalse,isPropagationStopped:returnFalse,isImmediatePropagationStopped:returnFalse,isSimulated:false,preventDefault:function preventDefault(){var e=this.originalEvent;this.isDefaultPrevented = returnTrue;if(e && !this.isSimulated){e.preventDefault();}},stopPropagation:function stopPropagation(){var e=this.originalEvent;this.isPropagationStopped = returnTrue;if(e && !this.isSimulated){e.stopPropagation();}},stopImmediatePropagation:function stopImmediatePropagation(){var e=this.originalEvent;this.isImmediatePropagationStopped = returnTrue;if(e && !this.isSimulated){e.stopImmediatePropagation();}this.stopPropagation();}}; // Create mouseenter/leave events using mouseover/out and event-time checks
 	// so that event delegation works in jQuery.
 	// Do the same for pointerenter/pointerleave and pointerover/pointerout
 	//
@@ -1137,13 +1137,7 @@
 	if(extra !== "margin"){val -= jQuery.css(elem,"border" + cssExpand[i] + "Width",true,styles);}}else { // At this point, extra isn't content, so add padding
 	val += jQuery.css(elem,"padding" + cssExpand[i],true,styles); // At this point, extra isn't content nor padding, so add border
 	if(extra !== "padding"){val += jQuery.css(elem,"border" + cssExpand[i] + "Width",true,styles);}}}return val;}function getWidthOrHeight(elem,name,extra){ // Start with offset property, which is equivalent to the border-box value
-	var valueIsBorderBox=true,val=name === "width"?elem.offsetWidth:elem.offsetHeight,styles=getStyles(elem),isBorderBox=jQuery.css(elem,"boxSizing",false,styles) === "border-box"; // Support: IE11 only
-	// In IE 11 fullscreen elements inside of an iframe have
-	// 100x too small dimensions (gh-1764).
-	if(document.msFullscreenElement && window.top !== window){ // Support: IE11 only
-	// Running getBoundingClientRect on a disconnected node
-	// in IE throws an error.
-	if(elem.getClientRects().length){val = Math.round(elem.getBoundingClientRect()[name] * 100);}} // Some non-html elements return undefined for offsetWidth, so check for null/undefined
+	var valueIsBorderBox=true,val=name === "width"?elem.offsetWidth:elem.offsetHeight,styles=getStyles(elem),isBorderBox=jQuery.css(elem,"boxSizing",false,styles) === "border-box"; // Some non-html elements return undefined for offsetWidth, so check for null/undefined
 	// svg - https://bugzilla.mozilla.org/show_bug.cgi?id=649285
 	// MathML - https://bugzilla.mozilla.org/show_bug.cgi?id=491668
 	if(val <= 0 || val == null){ // Fall back to computed then uncomputed css if necessary
@@ -1333,19 +1327,8 @@
 	if(ontype && jQuery.isFunction(elem[type]) && !jQuery.isWindow(elem)){ // Don't re-trigger an onFOO event when we call its FOO() method
 	tmp = elem[ontype];if(tmp){elem[ontype] = null;} // Prevent re-triggering of the same event, since we already bubbled it above
 	jQuery.event.triggered = type;elem[type]();jQuery.event.triggered = undefined;if(tmp){elem[ontype] = tmp;}}}}return event.result;}, // Piggyback on a donor event to simulate a different one
-	simulate:function simulate(type,elem,event){var e=jQuery.extend(new jQuery.Event(),event,{type:type,isSimulated:true // Previously, `originalEvent: {}` was set here, so stopPropagation call
-	// would not be triggered on donor event, since in our own
-	// jQuery.event.stopPropagation function we had a check for existence of
-	// originalEvent.stopPropagation method, so, consequently it would be a noop.
-	//
-	// But now, this "simulate" function is used only for events
-	// for which stopPropagation() is noop, so there is no need for that anymore.
-	//
-	// For the 1.x branch though, guard for "click" and "submit"
-	// events is still used, but was moved to jQuery.event.stopPropagation function
-	// because `originalEvent` should point to the original event for the constancy
-	// with other events and for more focused logic
-	});jQuery.event.trigger(e,null,elem);if(e.isDefaultPrevented()){event.preventDefault();}}});jQuery.fn.extend({trigger:function trigger(type,data){return this.each(function(){jQuery.event.trigger(type,data,this);});},triggerHandler:function triggerHandler(type,data){var elem=this[0];if(elem){return jQuery.event.trigger(type,data,elem,true);}}});jQuery.each(("blur focus focusin focusout load resize scroll unload click dblclick " + "mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " + "change select submit keydown keypress keyup error contextmenu").split(" "),function(i,name){ // Handle event binding
+	// Used only for `focus(in | out)` events
+	simulate:function simulate(type,elem,event){var e=jQuery.extend(new jQuery.Event(),event,{type:type,isSimulated:true});jQuery.event.trigger(e,null,elem);}});jQuery.fn.extend({trigger:function trigger(type,data){return this.each(function(){jQuery.event.trigger(type,data,this);});},triggerHandler:function triggerHandler(type,data){var elem=this[0];if(elem){return jQuery.event.trigger(type,data,elem,true);}}});jQuery.each(("blur focus focusin focusout load resize scroll unload click dblclick " + "mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " + "change select submit keydown keypress keyup error contextmenu").split(" "),function(i,name){ // Handle event binding
 	jQuery.fn[name] = function(data,fn){return arguments.length > 0?this.on(name,null,data,fn):this.trigger(name);};});jQuery.fn.extend({hover:function hover(fnOver,fnOut){return this.mouseenter(fnOver).mouseleave(fnOut || fnOver);}});support.focusin = "onfocusin" in window; // Support: Firefox
 	// Firefox doesn't have focus(in | out) events
 	// Related ticket - https://bugzilla.mozilla.org/show_bug.cgi?id=687787
@@ -1629,7 +1612,7 @@
 	responseText); // If the request succeeds, this function gets "data", "status", "jqXHR"
 	// but they are ignored because response was set above.
 	// If it fails, this function gets "jqXHR", "status", "error"
-	}).always(callback && function(jqXHR,status){self.each(function(){callback.apply(self,response || [jqXHR.responseText,status,jqXHR]);});});}return this;}; // Attach a bunch of functions for handling common AJAX events
+	}).always(callback && function(jqXHR,status){self.each(function(){callback.apply(this,response || [jqXHR.responseText,status,jqXHR]);});});}return this;}; // Attach a bunch of functions for handling common AJAX events
 	jQuery.each(["ajaxStart","ajaxStop","ajaxComplete","ajaxError","ajaxSuccess","ajaxSend"],function(i,type){jQuery.fn[type] = function(fn){return this.on(type,fn);};});jQuery.expr.filters.animated = function(elem){return jQuery.grep(jQuery.timers,function(fn){return elem === fn.elem;}).length;}; /**
 	 * Gets a window from an element
 	 */function getWindow(elem){return jQuery.isWindow(elem)?elem:elem.nodeType === 9 && elem.defaultView;}jQuery.offset = {setOffset:function setOffset(elem,options,i){var curPosition,curLeft,curCSSTop,curTop,curOffset,curCSSLeft,calculatePosition,position=jQuery.css(elem,"position"),curElem=jQuery(elem),props={}; // Set position first, in-case top/left are set even on static elem
@@ -1719,13 +1702,102 @@
 	      };
 	    }
 	
+	    var productPriceSelector = '.product-price strong';
+	
+	    var updatePrices = function updatePrices(pricesInCart, $cartOverview, $newCart) {
+	      _jquery2['default'].each(pricesInCart, function (index, priceInCart) {
+	        var productUrl = (0, _jquery2['default'])((0, _jquery2['default'])(priceInCart).parents('.product-line-grid')[0]).find('a.label').attr('href');
+	        var productAnchorSelector = '.label[href="' + productUrl + '"]';
+	        var newProductAnchor = $newCart.find(productAnchorSelector);
+	        var $cartItem = (0, _jquery2['default'])($cartOverview.find(productAnchorSelector).parents('.cart-item')[0]);
+	
+	        if (newProductAnchor.length > 0) {
+	          (function () {
+	            var $newCartItem = newProductAnchor.parents('.cart-item');
+	            var $productCartItems = $cartOverview.find(productAnchorSelector).parents('.cart-item');
+	
+	            _jquery2['default'].each($productCartItems, function (index, productCartItem) {
+	              var $productCartItem = (0, _jquery2['default'])(productCartItem);
+	              // Case when a gift previously added to cart has been removed
+	              if ($productCartItem.find('.gift').length > 0 && 0 === $newCartItem.find('.gift').length) {
+	                $productCartItem.remove();
+	              }
+	            });
+	
+	            if ($newCartItem.find('.gift').length === 1 && $productCartItems.find('.gift').length === 1 && $productCartItems.length > 1) {
+	              // Case when a product added manually has been removed and
+	              // the same product has been given away
+	              var $manuallyAddedProducts = $productCartItems.filter(function (index, productCartItem) {
+	                return (0, _jquery2['default'])(productCartItem).find('.gift').length === 0;
+	              });
+	              $manuallyAddedProducts.remove();
+	            }
+	          })();
+	        }
+	
+	        // Remove cart item if response does not contain current product link
+	        if (0 === newProductAnchor.length) {
+	          $cartItem.remove();
+	
+	          return;
+	        }
+	
+	        var $newCartItem = (0, _jquery2['default'])($newCart.find(productAnchorSelector).parents('.cart-item')[0]);
+	
+	        var newPrice;
+	        if ($newCartItem.find(productPriceSelector).find('.gift').length > 0) {
+	          newPrice = $newCartItem.find(productPriceSelector).html(); // Preserve gift tag
+	          $cartItem.find(productPriceSelector).html(newPrice);
+	        } else {
+	          newPrice = $newCartItem.find(productPriceSelector).text();
+	          $cartItem.find(productPriceSelector).text(newPrice);
+	        }
+	      });
+	    };
+	
+	    var appendGiftProducts = function appendGiftProducts($cartOverview, $newCart) {
+	      $newCart = $newCart.filter('.js-cart');
+	      var $productAnchors = $newCart.find('.label[href]');
+	
+	      _jquery2['default'].each($productAnchors, function (index, productAnchor) {
+	        var $productAnchor = (0, _jquery2['default'])(productAnchor);
+	        var productUrl = $productAnchor.attr('href');
+	        var $cartItems = $cartOverview.find('.cart-items');
+	        var $newCartItem = $productAnchor.parents('.cart-item');
+	
+	        if (0 === $cartItems.find('.label[href="' + productUrl + '"]').length) {
+	          $cartItems.append($productAnchor.parents('.cart-item'));
+	        } else {
+	          var $cartItem = $cartItems.find('.label[href="' + productUrl + '"]').parents('.cart-item');
+	          if ($cartItem.find('.gift').length === 0 && $newCartItem.find('.gift').length > 0) {
+	            $cartItems.append($newCartItem);
+	          }
+	        }
+	      });
+	    };
+	
 	    _jquery2['default'].post(getCartViewUrl, requestData).then(function (resp) {
-	      (0, _jquery2['default'])('.cart-overview').replaceWith(resp.cart_detailed);
+	      var $newCart = (0, _jquery2['default'])(resp.cart_detailed);
+	      var $cartOverview = (0, _jquery2['default'])('.cart-overview');
+	      var pricesInCart = $cartOverview.find(productPriceSelector);
+	
+	      if ($newCart.find('.no-items').length > 0) {
+	        $cartOverview.replaceWith(resp.cart_detailed);
+	      } else {
+	        updatePrices(pricesInCart, $cartOverview, $newCart);
+	        appendGiftProducts($cartOverview, $newCart);
+	      }
+	
 	      (0, _jquery2['default'])('.cart-detailed-totals').replaceWith(resp.cart_detailed_totals);
 	      (0, _jquery2['default'])('.cart-summary-items-subtotal').replaceWith(resp.cart_summary_items_subtotal);
 	      (0, _jquery2['default'])('.cart-summary-totals').replaceWith(resp.cart_summary_totals);
 	      (0, _jquery2['default'])('.cart-detailed-actions').replaceWith(resp.cart_detailed_actions);
 	      (0, _jquery2['default'])('.cart-voucher').replaceWith(resp.cart_voucher);
+	
+	      (0, _jquery2['default'])('.js-cart-line-product-quantity').each(function (index, input) {
+	        var $input = (0, _jquery2['default'])(input);
+	        $input.attr('value', $input.val());
+	      });
 	
 	      _prestashop2['default'].emit('updatedCart');
 	    }).fail(function (resp) {
@@ -1855,12 +1927,15 @@
 	
 	  var currentStepClass = 'js-current-step';
 	  var currentStepSelector = '.' + currentStepClass;
-	  var stepsAfterPersonalInformation = (0, _jquery2['default'])('#checkout-personal-information-step' + currentStepSelector).nextAll();
+	  var stepsAfterPersonalInformation = (0, _jquery2['default'])('#checkout-personal-information-step').nextAll();
 	
 	  (0, _jquery2['default'])(currentStepSelector).prevAll().add(stepsAfterPersonalInformation).on('click', function (event) {
-	    (0, _jquery2['default'])(currentStepSelector + ', .-current').removeClass(currentStepClass + ' -current');
-	    (0, _jquery2['default'])(event.target).closest('.checkout-step').toggleClass('-current');
-	    (0, _jquery2['default'])(event.target).closest('.checkout-step').toggleClass(currentStepClass);
+	    var $nextStep = (0, _jquery2['default'])(event.target).closest('.checkout-step');
+	    if (!$nextStep.hasClass('-unreachable')) {
+	      (0, _jquery2['default'])(currentStepSelector + ', .-current').removeClass(currentStepClass + ' -current');
+	      $nextStep.toggleClass('-current');
+	      $nextStep.toggleClass(currentStepClass);
+	    }
 	    _prestashop2['default'].emit('changedCheckoutStep', { event: event });
 	  });
 	
@@ -1961,6 +2036,7 @@
 	      (0, _jquery2['default'])('#' + selectedOption + '-additional-information').show();
 	      (0, _jquery2['default'])('#pay-with-' + selectedOption + '-form').show();
 	
+	      (0, _jquery2['default'])('.js-payment-binary').hide();
 	      if ((0, _jquery2['default'])('#' + selectedOption).hasClass('binary')) {
 	        var paymentOption = this.getPaymentOptionSelector(selectedOption);
 	        this.hideConfirmation();
@@ -1972,8 +2048,6 @@
 	          (0, _jquery2['default'])(paymentOption).addClass('disabled');
 	        }
 	      } else {
-	        (0, _jquery2['default'])('.js-payment-binary').hide();
-	
 	        this.showConfirmation();
 	        (0, _jquery2['default'])(this.confirmationSelector + ' button').attr('disabled', !show);
 	
@@ -2033,26 +2107,28 @@
 	
 	var _prestashop2 = _interopRequireDefault(_prestashop);
 	
-	var $body = (0, _jquery2['default'])('body');
-	var deliveryFormSelector = '#js-delivery';
-	var summarySelector = '#js-checkout-summary';
-	var deliveryStepSelector = '#checkout-delivery-step';
-	var editDeliveryButtonSelector = '.js-edit-delivery';
-	
 	exports['default'] = function () {
-	  var updateDeliveryForm = function updateDeliveryForm() {
+	  var $body = (0, _jquery2['default'])('body');
+	  var deliveryFormSelector = '#js-delivery';
+	  var summarySelector = '#js-checkout-summary';
+	  var deliveryStepSelector = '#checkout-delivery-step';
+	  var editDeliveryButtonSelector = '.js-edit-delivery';
+	
+	  var updateDeliveryForm = function updateDeliveryForm(event) {
 	    var $deliveryMethodForm = (0, _jquery2['default'])(deliveryFormSelector);
 	    var requestData = $deliveryMethodForm.serialize();
+	    var $inputChecked = (0, _jquery2['default'])(event.currentTarget);
+	    var $newDeliveryOption = $inputChecked.parents("div.delivery-option");
 	
 	    _jquery2['default'].post($deliveryMethodForm.data('url-update'), requestData).then(function (resp) {
 	      (0, _jquery2['default'])(summarySelector).replaceWith(resp.preview);
-	      _prestashop2['default'].emit('updatedDeliveryForm');
+	      _prestashop2['default'].emit('updatedDeliveryForm', { dataForm: $deliveryMethodForm.serializeArray(), deliveryOption: $newDeliveryOption });
 	    }).fail(function (resp) {
 	      _prestashop2['default'].trigger('handleError', { eventType: 'updateDeliveryOptions', resp: resp });
 	    });
 	  };
 	
-	  $body.on('change', deliveryFormSelector + ' input[type="radio"]', updateDeliveryForm);
+	  $body.on('change', deliveryFormSelector + ' input', updateDeliveryForm);
 	
 	  $body.on('click', editDeliveryButtonSelector, function (event) {
 	    event.stopPropagation();
@@ -2077,25 +2153,10 @@
 	
 	var pendingQuery = false;
 	
-	function updateDOM(_ref) {
-	    var rendered_products = _ref.rendered_products;
-	    var rendered_facets = _ref.rendered_facets;
-	
-	    (0, _jquery2['default'])('#products').replaceWith(rendered_products);
-	    (0, _jquery2['default'])('#search_filters').replaceWith(rendered_facets);
-	}
-	
-	var onpopstate = function onpopstate(e) {
-	    if (e.state && e.state.rendered_products) {
-	        updateDOM(e.state);
-	    }
-	};
-	
 	function updateResults(data) {
 	    pendingQuery = false;
-	    updateDOM(data);
+	    prestashop.emit('updateProductList', data);
 	    window.history.pushState(data, undefined, data.current_url);
-	    window.addEventListener('popstate', onpopstate);
 	}
 	
 	function handleError() {
@@ -2122,22 +2183,8 @@
 	}
 	
 	(0, _jquery2['default'])(document).ready(function () {
-	    (0, _jquery2['default'])('body').on('change', '#search_filters input[data-search-url]', function (event) {
-	        makeQuery(event.target.dataset.searchUrl);
-	    });
-	
-	    (0, _jquery2['default'])('body').on('click', '.js-search-filters-clear-all', function (event) {
-	        makeQuery(event.target.dataset.searchUrl);
-	    });
-	
-	    (0, _jquery2['default'])('body').on('click', '.js-search-link', function (event) {
-	        event.preventDefault();
-	        makeQuery((0, _jquery2['default'])(event.target).closest('a').get(0).href);
-	    });
-	
-	    (0, _jquery2['default'])('body').on('change', '#search_filters select', function (event) {
-	        var form = (0, _jquery2['default'])(event.target).closest('form');
-	        makeQuery('?' + form.serialize());
+	    prestashop.on('updateFacets', function (param) {
+	        makeQuery(param);
 	    });
 	});
 
@@ -2185,6 +2232,29 @@
 	(0, _jquery2['default'])(document).ready(function () {
 	  (0, _jquery2['default'])('body').on('change', '.product-variants [data-product-attribute]', function () {
 	    (0, _jquery2['default'])("input[name$='refresh']").click();
+	  });
+	
+	  (0, _jquery2['default'])('body').on('click', '.product-refresh', function (event, extraParameters) {
+	    var $productRefresh = (0, _jquery2['default'])(this);
+	    event.preventDefault();
+	
+	    var eventType = 'updatedProductCombination';
+	    if (typeof extraParameters !== 'undefined' && extraParameters.eventType) {
+	      eventType = extraParameters.eventType;
+	    }
+	
+	    var query = (0, _jquery2['default'])(event.target.form).serialize() + '&ajax=1&action=productrefresh';
+	    var actionURL = (0, _jquery2['default'])(event.target.form).attr('action');
+	
+	    _jquery2['default'].post(actionURL, query, null, 'json').then(function (resp) {
+	      _prestashop2['default'].emit('updateProduct', {
+	        reason: {
+	          productUrl: resp.productUrl
+	        },
+	        refreshUrl: $productRefresh.data('url-update'),
+	        eventType: eventType
+	      });
+	    });
 	  });
 	
 	  _prestashop2['default'].on('updateProduct', function (event) {
@@ -2235,13 +2305,20 @@
 	
 	      // Replace all "add to cart" sections but the quantity input in order to keep quantity field intact i.e.
 	      // Prevent quantity input from blinking with classic theme.
-	      replaceAddToCartSections((0, _jquery2['default'])(resp.product_add_to_cart)[2]);
+	      var $productAddToCart = undefined;
+	      (0, _jquery2['default'])(resp.product_add_to_cart).each(function (index, value) {
+	        if ((0, _jquery2['default'])(value).hasClass('product-add-to-cart')) {
+	          $productAddToCart = (0, _jquery2['default'])(value);
+	        }
+	      });
+	      replaceAddToCartSections($productAddToCart);
 	
 	      var minimalProductQuantity = parseInt(resp.product_minimal_quantity, 10);
 	      var quantityInputSelector = '#quantity_wanted';
 	      var quantityInput = (0, _jquery2['default'])(quantityInputSelector);
+	      var quantity_wanted = quantityInput.val();
 	
-	      if (!isNaN(minimalProductQuantity) && resp.product_has_combinations && eventType !== 'updatedProductQuantity') {
+	      if (!isNaN(minimalProductQuantity) && quantity_wanted < minimalProductQuantity && eventType !== 'updatedProductQuantity') {
 	        quantityInput.attr('min', minimalProductQuantity);
 	        quantityInput.val(minimalProductQuantity);
 	      }
@@ -2377,8 +2454,12 @@
 	      er = arguments[1];
 	      if (er instanceof Error) {
 	        throw er; // Unhandled 'error' event
-	      }
-	      throw TypeError('Uncaught, unspecified "error" event.');
+	      } else {
+	          // At least give some kind of context to the user
+	          var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
+	          err.context = er;
+	          throw err;
+	        }
 	    }
 	  }
 	

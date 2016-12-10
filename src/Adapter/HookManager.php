@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,10 +18,10 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author 	PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2015 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 namespace PrestaShop\PrestaShop\Adapter;
 
@@ -51,11 +51,19 @@ class HookManager
         $use_push = false,
         $id_shop = null
     ) {
-        try {
-            return \HookCore::exec($hook_name, $hook_args, $id_module, $array_return, $check_exceptions, $use_push, $id_shop);
-        } catch (\Exception $e) {
-            $logger = \PrestaShop\PrestaShop\Adapter\ServiceLocator::get('logger');
-            $logger->error(sprintf('Exception on hook %s for module %s. %s', $hook_name, $id_module, $e->getMessage()));
+        global $kernel;
+        if (!is_null($kernel)) {
+            // If the Symfony kernel is instanciated, we use it for the event fonctionnality
+            $hookDispatcher = $kernel->getContainer()->get('prestashop.hook.dispatcher');
+            return $hookDispatcher->renderForParameters($hook_name, $hook_args)->getContent();
+        }
+        else {
+            try {
+                return \HookCore::exec($hook_name, $hook_args, $id_module, $array_return, $check_exceptions, $use_push, $id_shop);
+            } catch (\Exception $e) {
+                $logger = \PrestaShop\PrestaShop\Adapter\ServiceLocator::get('logger');
+                $logger->error(sprintf('Exception on hook %s for module %s. %s', $hook_name, $id_module, $e->getMessage()));
+            }
         }
     }
 }

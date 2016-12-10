@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,35 +19,37 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 
 use PrestaShop\PrestaShop\Core\Cldr\Update;
+use PrestaShopBundle\Install\Install;
+use PrestaShopBundle\Install\XmlLoader;
 
 class InstallControllerHttpProcess extends InstallControllerHttp implements HttpConfigureInterface
 {
+    /** @var  Install */
     protected $model_install;
     public $process_steps = array();
     public $previous_button = false;
 
     public function init()
     {
-        require_once _PS_INSTALL_MODELS_PATH_.'install.php';
-        $this->model_install = new InstallModelInstall();
+        $this->model_install = new Install();
         $this->model_install->setTranslator($this->translator);
     }
 
     /**
-     * @see InstallAbstractModel::processNextStep()
+     * @see HttpConfigureInterface::processNextStep()
      */
     public function processNextStep()
     {
     }
 
     /**
-     * @see InstallAbstractModel::validate()
+     * @see HttpConfigureInterface::validate()
      */
     public function validate()
     {
@@ -89,6 +91,8 @@ class InstallControllerHttpProcess extends InstallControllerHttp implements Http
             $this->processInstallDefaultData();
         } elseif (Tools::getValue('populateDatabase') && !empty($this->session->process_validated['installDatabase'])) {
             $this->processPopulateDatabase();
+            // download and install language pack
+            Language::downloadAndInstallLanguagePack($this->session->lang);
         } elseif (Tools::getValue('configureShop') && !empty($this->session->process_validated['populateDatabase'])) {
             $this->processConfigureShop();
         } elseif (Tools::getValue('installFixtures') && !empty($this->session->process_validated['configureShop'])) {
@@ -277,7 +281,8 @@ class InstallControllerHttpProcess extends InstallControllerHttp implements Http
         $langs = \DbCore::getInstance()->executeS('SELECT * FROM '._DB_PREFIX_.'lang');
 
         foreach ($langs as $lang) {
-            $language_code = explode('-', $lang['language_code']);
+            $cldrRepository = \Tools::getCldr(null, $lang['locale']);
+            $language_code = explode('-', $cldrRepository->getCulture());
             if (count($language_code) == 1) {
                 $cldrUpdate->fetchLocale($language_code['0']);
             } else {
@@ -302,7 +307,7 @@ class InstallControllerHttpProcess extends InstallControllerHttp implements Http
     }
 
     /**
-     * @see InstallAbstractModel::display()
+     * @see HttpConfigureInterface::display()
      */
     public function display()
     {
@@ -318,7 +323,7 @@ class InstallControllerHttpProcess extends InstallControllerHttp implements Http
         $populate_step = array('key' => 'populateDatabase', 'lang' => $this->translator->trans('Populate database tables', array(), 'Install'));
         if ($low_memory) {
             $populate_step['subtasks'] = array();
-            $xml_loader = new InstallXmlLoader();
+            $xml_loader = new XmlLoader();
             $xml_loader->setTranslator($this->translator);
 
             foreach ($xml_loader->getSortedEntities() as $entity) {
@@ -334,7 +339,7 @@ class InstallControllerHttpProcess extends InstallControllerHttp implements Http
             $fixtures_step = array('key' => 'installFixtures', 'lang' => $this->translator->trans('Install demonstration data', array(), 'Install'));
             if ($low_memory) {
                 $fixtures_step['subtasks'] = array();
-                $xml_loader = new InstallXmlLoader();
+                $xml_loader = new XmlLoader();
                 $xml_loader->setTranslator($this->translator);
                 $xml_loader->setFixturesPath();
 

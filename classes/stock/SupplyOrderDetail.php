@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -311,7 +311,7 @@ class SupplyOrderDetailCore extends ObjectModel
                     $errors[] = '<b>'.SupplyOrderDetail::displayFieldName($field, get_class($this), $htmlentities).'</b> '.Tools::displayError('is invalid.');
                 } elseif ($field == 'passwd') {
                     if ($value = Tools::getValue($field)) {
-                        $this->{$field} = Tools::encrypt($value);
+                        $this->{$field} = Tools::hash($value);
                     } else {
                         $this->{$field} = $value;
                     }

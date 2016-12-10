@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -433,12 +433,19 @@ class ModuleManager implements AddonManagerInterface
      */
     public function getError($name)
     {
+        $message = null;
         $module = $this->moduleRepository->getModule($name);
         if ($module->hasValidInstance()) {
             $errors = $module->getInstance()->getErrors();
-            return array_pop($errors);
+            $message = array_pop($errors);
         }
 
-        return null;
+        if (empty($message)) {
+            $message = $this->translator->trans('Unfortunately, the module did not return additional details.',
+                array(),
+                'Admin.Modules.Notification');
+        }
+        
+        return $message;
     }
 }

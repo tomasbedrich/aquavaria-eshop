@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,10 +18,10 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author     PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2015 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 namespace PrestaShop\PrestaShop\Adapter\Addons;
 
@@ -34,6 +34,7 @@ use Context;
 use Country;
 use Exception;
 use Tools;
+use PhpEncryption;
 
 /**
  * Data provider for new Architecture, about Addons.
@@ -46,9 +47,14 @@ class AddonsDataProvider implements AddonsInterface
 
     private $marketplaceClient;
 
+    private $encryption;
+
+    public $cacheDir;
+
     public function __construct(ApiClient $apiClient)
     {
         $this->marketplaceClient = $apiClient;
+        $this->encryption = new PhpEncryption(_NEW_COOKIE_KEY_);
     }
 
     public function downloadModule($module_id)
@@ -69,7 +75,7 @@ class AddonsDataProvider implements AddonsInterface
             }
         }
 
-        $temp_filename = tempnam('', 'mod');
+        $temp_filename = tempnam($this->cacheDir, 'mod');
         if (file_put_contents($temp_filename, $module_data) !== false) {
             return $this->unZip($temp_filename);
         } else {
@@ -219,13 +225,34 @@ class AddonsDataProvider implements AddonsInterface
         throw new Exception('Cannot execute request '.$action.' to Addons');
     }
 
+    /**
+     * @param $moduleId
+     * @return Module
+     */
+    public function getModuleById($moduleId)
+    {
+        $moduleAttributes = $this->request('module', array('id_module' => $moduleId));
+
+        $attributes = $this->moduleRepository->getModuleAttributes($moduleAttributes['name']);
+
+        foreach ($attributes->all() as $name => $value) {
+            if (!array_key_exists($name, $moduleAttributes)) {
+                $moduleAttributes[$name] = $value;
+            }
+        }
+
+        return new Module($moduleAttributes);
+    }
+
     protected function getAddonsCredentials()
     {
         $request = Request::createFromGlobals();
+        $username = $this->encryption->decrypt($request->cookies->get('username_addons'));
+        $password = $this->encryption->decrypt($request->cookies->get('password_addons'));
 
         return array(
-           'username_addons' => $request->cookies->get('username_addons'),
-           'password_addons' => $request->cookies->get('password_addons'),
+           'username_addons' => $username,
+           'password_addons' => $password,
         );
     }
 
@@ -233,9 +260,10 @@ class AddonsDataProvider implements AddonsInterface
     public function getAddonsEmail()
     {
         $request = Request::createFromGlobals();
+        $username = $this->encryption->decrypt($request->cookies->get('username_addons'));
 
         return array(
-            'username_addons' => $request->cookies->get('username_addons'),
+            'username_addons' => $username,
         );
     }
 

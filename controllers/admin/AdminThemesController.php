@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,12 +19,13 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 
 use PrestaShop\PrestaShop\Core\Addon\Theme\ThemeManagerBuilder;
+use PrestaShop\PrestaShop\Core\Addon\Theme\ThemeExporter;
 use PrestaShop\PrestaShop\Core\Shop\LogoUploader;
 
 /**
@@ -139,6 +140,11 @@ class AdminThemesControllerCore extends AdminController
                 'desc' => $this->trans('Add new theme', array(), 'Admin.Design.Feature'),
                 'icon' => 'process-icon-new'
             );
+            $this->page_header_toolbar_btn['export_theme'] = array(
+                'href' => self::$currentIndex.'&action=exporttheme&token='.$this->token,
+                'desc' => $this->trans('Export current theme', array(), 'Admin.Design.Feature'),
+                'icon' => 'process-icon-export'
+            );
 
             if ($this->context->mode) {
                 unset($this->toolbar_btn['new']);
@@ -177,12 +183,6 @@ class AdminThemesControllerCore extends AdminController
                 list($width, $height, $type, $attr) = getimagesize(_PS_IMG_DIR_.Configuration::get('PS_LOGO'));
                 Configuration::updateValue('SHOP_LOGO_HEIGHT', (int)round($height));
                 Configuration::updateValue('SHOP_LOGO_WIDTH', (int)round($width));
-            }
-            if (Configuration::get('PS_LOGO_MOBILE') && trim(Configuration::get('PS_LOGO_MOBILE')) != ''
-                && file_exists(_PS_IMG_DIR_.Configuration::get('PS_LOGO_MOBILE')) && filesize(_PS_IMG_DIR_.Configuration::get('PS_LOGO_MOBILE'))) {
-                list($width, $height, $type, $attr) = getimagesize(_PS_IMG_DIR_.Configuration::get('PS_LOGO_MOBILE'));
-                Configuration::updateValue('SHOP_LOGO_MOBILE_HEIGHT', (int)round($height));
-                Configuration::updateValue('SHOP_LOGO_MOBILE_WIDTH', (int)round($width));
             }
 
             $this->content .= $content;
@@ -224,26 +224,50 @@ class AdminThemesControllerCore extends AdminController
      */
     public function postProcess()
     {
-        if (Tools::isSubmit('submitAddconfiguration')) {
-            if ($filename = Tools::getValue('theme_archive_server')) {
-                $path = _PS_ALL_THEMES_DIR_.$filename;
-                $this->theme_manager->install($path);
-            } elseif ($filename = Tools::getValue('themearchive')) {
-                $path = _PS_ALL_THEMES_DIR_.$filename;
-                if ($this->processUploadFile($path)) {
+        global $kernel;
+
+        if ('exporttheme' === Tools::getValue('action')) {
+            $exporter = $kernel->getContainer()->get('prestashop.core.addon.theme.exporter');
+            $path = $exporter->export($this->context->shop->theme);
+            $this->confirmations[] = $this->trans(
+                'Your theme has been correctly exported: %path%',
+                ['%path%' => $path],
+                'Admin.Notifications.Success'
+            );
+        } elseif (Tools::isSubmit('submitAddconfiguration')) {
+            try {
+                if ($filename = Tools::getValue('theme_archive_server')) {
+                    $path = _PS_ALL_THEMES_DIR_.$filename;
                     $this->theme_manager->install($path);
-                    @unlink($path);
+                } elseif ($filename = Tools::getValue('themearchive')) {
+                    $path = _PS_ALL_THEMES_DIR_.$filename;
+                    if ($this->processUploadFile($path)) {
+                        $this->theme_manager->install($path);
+                        @unlink($path);
+                    }
+                } elseif ($source = Tools::getValue('themearchiveUrl')) {
+                    $this->theme_manager->install($source);
                 }
-            } elseif ($source = Tools::getValue('themearchiveUrl')) {
-                $this->theme_manager->install($source);
+            } catch (Exception $e) {
+                $this->errors[] = $e->getMessage();
             }
-            $this->redirect_after = $this->context->link->getAdminLink('AdminThemes');
+
+            if (empty($this->errors)) {
+                $this->redirect_after = $this->context->link->getAdminLink('AdminThemes');
+            }
         } elseif (Tools::getValue('action') == 'submitConfigureLayouts') {
             $this->processSubmitConfigureLayouts();
             $this->redirect_after = $this->context->link->getAdminLink('AdminThemes');
         } elseif (Tools::getValue('action') == 'enableTheme') {
-            $this->theme_manager->enable(Tools::getValue('theme_name'));
-            $this->redirect_after = $this->context->link->getAdminLink('AdminThemes');
+            $isThemeEnabled = $this->theme_manager->enable(Tools::getValue('theme_name'));
+            // get errors if theme wasn't enabled
+            if (!$isThemeEnabled) {
+                $this->errors[] = $this->theme_manager->getErrors(Tools::getValue('theme_name'));
+            } else {
+                Tools::clearSmartyCache();
+                Tools::clearCache();
+                $this->redirect_after = $this->context->link->getAdminLink('AdminThemes');
+            }
         } elseif (Tools::getValue('action') == 'deleteTheme') {
             $this->theme_manager->uninstall(Tools::getValue('theme_name'));
             $this->redirect_after = $this->context->link->getAdminLink('AdminThemes');
@@ -341,7 +365,7 @@ class AdminThemesControllerCore extends AdminController
                 'tabs' => array(
                     'logo' => $this->trans('Logo', array(), 'Admin.Global'),
                     'logo2' => $this->trans('Invoice & Email Logos', array(), 'Admin.Design.Feature'),
-                    'icons' => $this->trans('Icons', array(), 'Admin.Design.Feature'),
+                    'icons' => $this->trans('Favicons', array(), 'Admin.Design.Feature'),
                     ),
                 'fields' => array(
                     'PS_LOGO' => array(

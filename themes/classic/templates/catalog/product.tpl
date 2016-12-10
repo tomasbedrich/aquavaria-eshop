@@ -1,3 +1,27 @@
+{**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ *}
 {extends file=$layout}
 
 {block name='head_seo' prepend}
@@ -131,6 +155,11 @@
                   <a class="nav-link" data-toggle="tab" href="#attachments">{l s='Attachments' d='Shop.Theme.Catalog'}</a>
                 </li>
                 {/if}
+                {foreach from=$product.extraContent item=extra key=extraKey}
+                <li class="nav-item">
+                  <a class="nav-link" data-toggle="tab" href="#extra-{$extraKey}">{$extra.title}</a>
+                </li>
+                {/foreach}
               </ul>
 
               <div class="tab-content" id="tab-content">
@@ -161,6 +190,11 @@
                    </div>
                  {/if}
                {/block}
+               {foreach from=$product.extraContent item=extra key=extraKey}
+               <div class="tab-pane fade in {$extra.attr.class}" id="extra-{$extraKey}" {foreach $extra.attr as $key => $val} {$key}="{$val}"{/foreach}>
+                   {$extra.content nofilter}
+               </div>
+               {/foreach}
             </div>
           </div>
         </div>
@@ -171,11 +205,13 @@
       {if $accessories}
         <section class="product-accessories clearfix">
           <h3 class="h5 text-uppercase">{l s='You might also like' d='Shop.Theme.Catalog'}</h3>
-          {foreach from=$accessories item="product_accessory"}
-            {block name='product_miniature'}
-              {include file='catalog/_partials/miniatures/product.tpl' product=$product_accessory}
-            {/block}
-          {/foreach}
+          <div class="products">
+            {foreach from=$accessories item="product_accessory"}
+              {block name='product_miniature'}
+                {include file='catalog/_partials/miniatures/product.tpl' product=$product_accessory}
+              {/block}
+            {/foreach}
+          </div>
         </section>
       {/if}
     {/block}

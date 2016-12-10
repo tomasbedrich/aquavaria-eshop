@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -108,17 +108,23 @@ class SitemapControllerCore extends FrontController
             ];
         }
 
-        $catalog['manufacturer'] = [
-            'id' => 'manufacturer-page',
-            'label' => $this->trans('Manufacturers', array(), 'Shop.Theme.Catalog'),
-            'url' => $this->context->link->getPageLink('manufacturer'),
-        ];
+        if (Configuration::get('PS_DISPLAY_SUPPLIERS')) {
+            $manufacturers = Manufacturer::getLiteManufacturersList($this->context->language->id, 'sitemap');
+            $catalog['manufacturer'] = [
+                'id' => 'manufacturer-page',
+                'label' => $this->trans('Brands', array(), 'Shop.Theme.Catalog'),
+                'url' => $this->context->link->getPageLink('manufacturer'),
+                'children' => $manufacturers,
+            ];
 
-        $catalog['supplier'] = [
-            'id' => 'supplier-page',
-            'label' => $this->trans('Suppliers', array(), 'Shop.Theme.Catalog'),
-            'url' => $this->context->link->getPageLink('supplier'),
-        ];
+            $suppliers = Supplier::getLiteSuppliersList($this->context->language->id, 'sitemap');
+            $catalog['supplier'] = [
+                'id' => 'supplier-page',
+                'label' => $this->trans('Suppliers', array(), 'Shop.Theme.Catalog'),
+                'url' => $this->context->link->getPageLink('supplier'),
+                'children' => $suppliers,
+            ];
+        }
 
         $categories = Category::getRootCategory()->recurseLiteCategTree(0, 0, null, null, 'sitemap');
         $catalog['category'] = [

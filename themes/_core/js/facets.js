@@ -1,23 +1,35 @@
+/**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
 import $ from 'jquery';
 
 let pendingQuery = false;
 
-function updateDOM ({rendered_products, rendered_facets}) {
-    $('#products').replaceWith(rendered_products);
-    $('#search_filters').replaceWith(rendered_facets);
-}
-
-const onpopstate = e => {
-    if (e.state && e.state.rendered_products) {
-        updateDOM(e.state);
-    }
-};
-
 function updateResults (data) {
     pendingQuery = false;
-    updateDOM(data);
+    prestashop.emit('updateProductList', data);
     window.history.pushState(data, undefined, data.current_url);
-    window.addEventListener('popstate', onpopstate);
 }
 
 function handleError () {
@@ -52,21 +64,7 @@ function makeQuery (url) {
 }
 
 $(document).ready(function () {
-    $('body').on('change', '#search_filters input[data-search-url]', function (event) {
-        makeQuery(event.target.dataset.searchUrl);
-    });
-
-    $('body').on('click', '.js-search-filters-clear-all', function (event) {
-        makeQuery(event.target.dataset.searchUrl);
-    });
-
-    $('body').on('click', '.js-search-link', function (event) {
-        event.preventDefault();
-        makeQuery($(event.target).closest('a').get(0).href);
-    });
-
-    $('body').on('change', '#search_filters select', function (event) {
-        const form = $(event.target).closest('form');
-        makeQuery('?' + form.serialize());
+    prestashop.on('updateFacets', (param) => {
+      makeQuery(param);
     });
 });

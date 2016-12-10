@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,11 +19,13 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 namespace PrestaShop\PrestaShop\Core\Payment;
+
+use PrestaShopBundle\Service\Hook\HookContentClassInterface;
 
 /**
  * We define 4 types of payment options:
@@ -33,7 +35,7 @@ namespace PrestaShop\PrestaShop\Core\Payment;
  * - the "embedded" kind: you write your credit card info in a form that is on your site and not inside an iframe (e.g. stripe)
  * - the "iframe" kind: payment form is displayed on your website but inside an iframe (e.g. atos)
  */
-class PaymentOption
+class PaymentOption implements HookContentClassInterface
 {
     /**
      * This text will be displayed

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,10 +19,12 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
+
+use PrestaShopBundle\Install\LanguageList;
 
 class InstallControllerHttp
 {
@@ -79,7 +81,7 @@ class InstallControllerHttp
     public $previous_button = true;
 
     /**
-     * @var InstallAbstractModel
+     * @var \PrestaShopBundle\Install\AbstractInstall
      */
     public $model;
 
@@ -362,7 +364,7 @@ class InstallControllerHttp
     public function getDocumentationLink()
     {
         /* Link to translated documentation (if available) */
-        return $this->translator->trans('http://doc.prestashop.com/display/PS16/Installing+PrestaShop', array(), 'Install');
+        return $this->translator->trans('http://doc.prestashop.com/display/PS17/Installing+PrestaShop', array(), 'Install');
     }
 
     /**

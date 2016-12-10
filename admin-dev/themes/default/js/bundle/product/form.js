@@ -1,5 +1,5 @@
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,7 +18,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -56,10 +56,10 @@ $(document).ready(function() {
     displayFieldsManager.refresh();
   });
 
-  /* validate price fields , as Thomas de Nabord said */
-  $(".money-type input[type='text']").change(function validate(event) {
-    var inputValue = $(this).val();
-    var parsedValue = truncateDecimals(parseFloat(inputValue),6);
+  // Validate price fields on input change
+  $(".money-type input[type='text']").change(function validate() {
+    var inputValue = priceCalculation.normalizePrice($(this).val());
+    var parsedValue = truncateDecimals(inputValue, 6);
 
     $(this).val(parsedValue);
   });
@@ -68,6 +68,12 @@ $(document).ready(function() {
   $('.datepicker').datetimepicker({
     locale: iso_user,
     format: 'YYYY-MM-DD'
+  });
+
+  /** tooltips should be hidden when we move to another tab */
+  $('#form-nav').on('click','.nav-item', function clearTooltipsAndPopovers() {
+    $('[data-toggle="tooltip"]').tooltip('hide');
+    $('[data-toggle="popover"]').popover('hide');
   });
 });
 
@@ -94,6 +100,8 @@ var displayFieldsManager = (function() {
         $(this).select();
       });
 
+      this.initVisibilityRule();
+
       /** Tax rule dropdown shortcut */
       $('a#tax_rule_shortcut_opener').on('click', function () {
         // lazy instantiated
@@ -113,6 +121,28 @@ var displayFieldsManager = (function() {
 
         return false;
       });
+    },
+    /**
+     * When a product is available for order, its price should be visible,
+     * whereas products unavailable for order can have their prices visible or hidden.
+     */
+    'initVisibilityRule': function () {
+      var showPriceSelector = '.js-show-price';
+      var availableForOrderSelector = '.js-available-for-order';
+
+      var applyVisibilityRule = function applyVisibilityRule() {
+        var $availableForOrder = $(availableForOrderSelector + ' input');
+        var $showPrice = $(showPriceSelector + ' input');
+        var $showPriceColumn = $(showPriceSelector);
+        if ($availableForOrder.prop('checked')) {
+          $showPrice.prop('checked', true);
+          $showPriceColumn.addClass('hide');
+        } else {
+          $showPriceColumn.removeClass('hide');
+        }
+      };
+      $(availableForOrderSelector + ' .checkbox').on('click', applyVisibilityRule);
+      applyVisibilityRule();
     },
     'refresh': function () {
       this.checkAccessVariations();
@@ -202,7 +232,7 @@ var displayFieldsManager = (function() {
           onContinue: function () {
             $.ajax({
               type: 'GET',
-              url: $('#accordion_combinations').attr('data-action-delete-all') + '/' + $('#form_id_product').val(),
+              url: $('#accordion_combinations').attr('data-action-delete-all').replace(/delete-all\/\d+/, 'delete-all/' + $('#form_id_product').val()),
               success: function () {
                 $('#accordion_combinations .combination').remove();
                 displayFieldsManager.refresh();
@@ -339,7 +369,7 @@ var featuresCollection = (function() {
 
   /** Add a feature */
   function add() {
-    var newForm = collectionHolder.attr('data-prototype').replace(/__name__/g, collectionHolder.children().length);
+    var newForm = collectionHolder.attr('data-prototype').replace(/__name__/g, collectionHolder.children('.row').length);
     collectionHolder.append(newForm);
     prestaShopUiKit.initSelects();
   }
@@ -373,7 +403,7 @@ var featuresCollection = (function() {
 
         if('' !== $(this).val()) {
           $.ajax({
-            url: $(this).attr('data-action') + '/' + $(this).val(),
+            url: $(this).attr('data-action').replace(/\/\d+/, '/' + $(this).val()),
             success: function(response) {
               $selector.prop('disabled', response.length === 0);
               $selector.empty();
@@ -391,7 +421,7 @@ var featuresCollection = (function() {
 
       var $featuresContainer = $('#features-content');
 
-      $featuresContainer.on('change', '.row select, .row input[type="text"]', (event) => {
+      $featuresContainer.on('change', '.row select, .row input[type="text"]', function onChange(event){
         var that = event.currentTarget;
         var $row = $($(that).parents('.row')[0]);
         var $definedValueSelector = $row.find('.feature-value-selector');
@@ -411,27 +441,29 @@ var featuresCollection = (function() {
  * Suppliers management
  */
 var supplier = (function() {
-  var defaultSupplierRow = $('#default_supplier_list');
-  var isInit = false;
+
+  var supplierInputManage = function(input) {
+    var supplierDefaultInput = $('#form_step6_suppliers input[name="form[step6][default_supplier]"][value=' + $(input).val() +']');
+    if($(input).is(':checked')) {
+      supplierDefaultInput.prop('disabled', false).show();
+    } else {
+      supplierDefaultInput.prop('disabled', true).hide();
+    }
+  };
+
   return {
     'init': function() {
       /** On supplier select, hide or show the default supplier selector */
-      var supplierInput = $('#form_step6_suppliers input');
+      var supplierInput = $('#form_step6_suppliers input[name="form[step6][suppliers][]"]');
       supplierInput.change(function() {
-        if (supplierInput.length >= 1 && $('#form_step6_suppliers input:checked').length >= 1) {
-          defaultSupplierRow.show();
-        } else {
-          defaultSupplierRow.hide();
-        }
+        supplierInputManage($(this));
         supplierCombinations.refresh();
       });
 
       //default display
-      if (supplierInput.length >= 1 && $('#form_step6_suppliers input:checked').length >= 1) {
-        defaultSupplierRow.show();
-      } else {
-        defaultSupplierRow.hide();
-      }
+      $('#form_step6_suppliers input[name="form[step6][suppliers][]"]').map(function() {
+        supplierInputManage($(this));
+      });
     }
   };
 })();
@@ -448,8 +480,11 @@ var supplierCombinations = (function() {
       var suppliers = $('#form_step6_suppliers input[name="form[step6][suppliers][]"]:checked').map(function() {
         return $(this).val();
       }).get();
-      var url = collectionHolder.attr('data-url') + '/' + id_product + (suppliers.length > 0 ? '/' + suppliers.join('-') : '');
-
+      var url = collectionHolder.attr('data-url')
+        .replace(
+          /refresh-product-supplier-combination-form\/\d+\/\d+/,
+          'refresh-product-supplier-combination-form/' + id_product + (suppliers.length > 0 ? '/' + suppliers.join('-') : '')
+        );
       $.ajax({
         url: url,
         success: function(response) {
@@ -541,9 +576,11 @@ var specificPrices = (function() {
 
   /** Get all specific prices */
   function getAll() {
+    var url = elem.attr('data').replace(/list\/\d+/, 'list/' + id_product);
+
     $.ajax({
       type: 'GET',
-      url: elem.attr('data') + '/' + id_product,
+      url: url,
       success: function(specific_prices) {
         var tbody = elem.find('tbody');
         tbody.find('tr').remove();
@@ -566,7 +603,7 @@ var specificPrices = (function() {
             '<td>' + specific_price.impact + '</td>' +
             '<td>' + specific_price.period + '</td>' +
             '<td>' + specific_price.from_quantity + '</td>' +
-            '<td>' + (specific_price.can_delete ? '<a href="' + $('#js-specific-price-list').attr('data-action-delete') + '/' + specific_price.id_specific_price + '" class="js-delete delete"><i class="material-icons">delete</i></a>' : '') + '</td>' +
+            '<td>' + (specific_price.can_delete ? '<a href="' + $('#js-specific-price-list').attr('data-action-delete').replace(/delete\/\d+/, 'delete/' + specific_price.id_specific_price) + '" class="js-delete delete"><i class="material-icons">delete</i></a>' : '') + '</td>' +
             '</tr>';
 
           tbody.append(row);
@@ -632,7 +669,7 @@ var specificPrices = (function() {
   /** refresh combinations list selector for specific price form */
   function refreshCombinationsList() {
     var elem = $('#form_step2_specific_price_sp_id_product_attribute');
-    var url = elem.attr('data-action') + '/' + id_product;
+    var url = elem.attr('data-action').replace(/product-combinations\/\d+/, 'product-combinations/' + id_product);
 
     $.ajax({
       type: 'GET',
@@ -753,7 +790,7 @@ var warehouseCombinations = (function() {
     'refresh': function() {
       var show = $('input#form_step3_advanced_stock_management:checked').size() > 0;
       if (show) {
-        var url = collectionHolder.attr('data-url') + '/' + id_product;
+        var url = collectionHolder.attr('data-url').replace(/\/\d+/, '/' + id_product);
         $.ajax({
           url: url,
           success: function(response) {
@@ -796,6 +833,7 @@ var form = (function() {
         $('.btn-submit', elem).attr('disabled', 'disabled');
         $('ul.text-danger').remove();
         $('*.has-danger').removeClass('has-danger');
+        $('#form-nav li.has-error').removeClass('has-error');
       },
       success: function(response) {
         if (redirect) {
@@ -824,18 +862,28 @@ var form = (function() {
           });
           html += '</ul>';
 
-          $('#form_' + key).parent().append(html);
-          $('#form_' + key).parent().addClass('has-danger');
+          if (key.match(/^combination_.*/)) {
+            $('#' + key).parent().addClass('has-danger').append(html);
+          } else {
+            $('#form_' + key).parent().addClass('has-danger').append(html);
+          }
+
         });
 
         /** find first tab with error, then switch to it */
-        var tabIndexError = tabsWithErrors[0].split('_')[0];
-        $('#form-nav li a[href="#' + tabIndexError + '"]').tab('show');
+        tabsWithErrors.sort();
+        $.each(tabsWithErrors, function(key, tabIndex) {
+          if (0 === key) {
+            $('#form-nav li a[href="#' + tabIndex.split('_')[0] + '"]').tab('show');
+          }
+
+          $('#form-nav li a[href="#' + tabIndex.split('_')[0] + '"]').parent().addClass('has-error');
+        });
 
         /** scroll to 1st error */
         if ($('.has-danger').first().offset()) {
           $('html, body').animate({
-            scrollTop: $('.has-danger').first().offset().top - $('.page-head').height() - $('.navbar-header').height()
+            scrollTop: $('.has-danger').first().offset().top - $('nav.main-header').height()
           }, 500);
         }
       },
@@ -894,6 +942,20 @@ var form = (function() {
       jwerty.key('ctrl+Q', function(e) {
         e.preventDefault();
         send($('.product-footer .go-catalog').attr('data-redirect'));
+      });
+
+      /** create keyboard event for save & go preview */
+      jwerty.key('ctrl+V', function(e) {
+          e.preventDefault();
+          var productFooter = $('.product-footer .preview');
+          send(productFooter.attr('data-redirect'), productFooter.attr('target'));
+      });
+
+      /** create keyboard event for save & active or desactive product*/
+      jwerty.key('ctrl+O', function(e) {
+        e.preventDefault();
+        var step1CheckBox = $('#form_step1_active');
+        step1CheckBox.prop('checked', !step1CheckBox.is(':checked'));
       });
 
       elem.submit(function(event) {
@@ -999,7 +1061,7 @@ var form = (function() {
             $('#attribute-generator-' + e.attrs.value).remove();
           });
         });
-        imagesProduct.expander();
+        imagesProduct.initExpander();
       });
     },
     'send': function() {
@@ -1057,7 +1119,7 @@ var virtualProduct = (function() {
   var getOnDeleteVirtualProductFileHandler = function ($deleteButton) {
     return $.ajax({
       type: 'GET',
-      url: $deleteButton.attr('href') + '/' + id_product,
+      url: $deleteButton.attr('href').replace(/\/\d+/, '/' + id_product),
       success: function () {
         $('#form_step3_virtual_product_file_input').removeClass('hide').addClass('show');
         $('#form_step3_virtual_product_file_details').removeClass('show').addClass('hide');
@@ -1073,10 +1135,11 @@ var virtualProduct = (function() {
         } else {
           $('#virtual_product_content').hide();
 
+          var url = $('#virtual_product').attr('data-action-remove').replace(/remove\/\d+/, 'remove/' + id_product);
           //delete virtual product
           $.ajax({
             type: 'GET',
-            url: $('#virtual_product').attr('data-action-remove') + '/' + id_product,
+            url: url,
             success: function() {
               //empty form
               $('#form_step3_virtual_product_file_input').removeClass('hide').addClass('show');
@@ -1140,7 +1203,7 @@ var virtualProduct = (function() {
 
         $.ajax({
           type: 'POST',
-          url: $('#virtual_product').attr('data-action') + '/' + id_product,
+          url: $('#virtual_product').attr('data-action').replace(/save\/\d+/, 'save/' + id_product),
           data: data,
           contentType: false,
           processData: false,
@@ -1202,6 +1265,7 @@ var attachmentProduct = (function() {
   return {
     'init': function() {
       var buttonSave = $('#form_step6_attachment_product_add');
+      var buttonCancel = $('#form_step6_attachment_product_cancel');
 
       /** check all attachments files */
       $('#product-attachment-files-check').change(function() {
@@ -1211,6 +1275,16 @@ var attachmentProduct = (function() {
           $('#product-attachment-file input[type="checkbox"]').prop('checked', false);
         }
       });
+
+      buttonCancel.click(function (){
+        resetAttachmentForm();
+      });
+
+      function resetAttachmentForm() {
+        $('#form_step6_attachment_product_file').val('');
+        $('#form_step6_attachment_product_name').val('');
+        $('#form_step6_attachment_product_description').val('');
+      }
 
       /** add attachment */
       $('#form_step6_attachment_product_add').click(function() {
@@ -1225,7 +1299,7 @@ var attachmentProduct = (function() {
 
         $.ajax({
           type: 'POST',
-          url: $('#form_step6_attachment_product').attr('data-action') + '/' + id_product,
+          url: $('#form_step6_attachment_product').attr('data-action').replace(/\/\d+/, '/' + id_product),
           data: data,
           contentType: false,
           processData: false,
@@ -1235,9 +1309,7 @@ var attachmentProduct = (function() {
             $('*.has-danger').removeClass('has-danger');
           },
           success: function(response) {
-            $('#form_step6_attachment_product_file').val('');
-            $('#form_step6_attachment_product_name').val('');
-            $('#form_step6_attachment_product_description').val('');
+            resetAttachmentForm();
 
             //inject new attachment in attachment list
             if (response.id) {
@@ -1277,11 +1349,10 @@ var attachmentProduct = (function() {
  * images product management
  */
 var imagesProduct = (function() {
-  var id_product = $('#form_id_product').val();
+  var dropZoneElem = $('#product-images-dropzone');
+  var expanderElem = $('#product-images-container .dropzone-expander');
 
   function checkDropzoneMode() {
-      var dropZoneElem = $('#product-images-dropzone');
-
       if (!dropZoneElem.find('.dz-preview:not(.openfilemanager)').length) {
         dropZoneElem.removeClass('dz-started');
         dropZoneElem.find('.dz-preview.openfilemanager').hide();
@@ -1292,27 +1363,49 @@ var imagesProduct = (function() {
   };
 
   return {
-    'expander': function() {
-      var closedHeight = $('#product-images-dropzone').outerHeight();
-      var realHeight = $('#product-images-dropzone')[0].scrollHeight;
+    'toggleExpand': function() {
+        if (expanderElem.hasClass('expand')) {
+          dropZoneElem.css('height', 'auto');
+          expanderElem.removeClass('expand').addClass('compress');
+        } else {
+          dropZoneElem.css('height', '');
+          expanderElem.removeClass('compress').addClass('expand');
+        }
+    },
+    'displayExpander': function() {
+      expanderElem.show();
+    },
+    'hideExpander': function() {
+      expanderElem.hide();
+    },
+    'shouldDisplayExpander': function () {
+      var oldHeight = dropZoneElem.css('height');
 
-      if (realHeight > closedHeight) {
-        $('#product-images-container .dropzone-expander').addClass('expand').show();
+      dropZoneElem.css('height', '');
+      var closedHeight = dropZoneElem.outerHeight();
+      var realHeight = dropZoneElem[0].scrollHeight;
+      dropZoneElem.css('height', oldHeight);
+
+      return (realHeight > closedHeight);
+    },
+    'updateExpander': function() {
+      if (this.shouldDisplayExpander()) {
+        this.displayExpander();
+      }
+    },
+    'initExpander': function() {
+      if (this.shouldDisplayExpander()) {
+        this.displayExpander();
+        expanderElem.addClass('expand');
       }
 
+      var self = this;
       $(document).on('click', '#product-images-container .dropzone-expander', function() {
-        if ($('#product-images-container .dropzone-expander').hasClass('expand')) {
-          $('#product-images-dropzone').css('height', 'auto');
-          $('#product-images-container .dropzone-expander').removeClass('expand').addClass('compress');
-        } else {
-          $('#product-images-dropzone').css('height', '');
-          $('#product-images-container .dropzone-expander').removeClass('compress').addClass('expand');
-        }
+        self.toggleExpand();
       });
     },
     'init': function() {
       Dropzone.autoDiscover = false;
-      var dropZoneElem = $('#product-images-dropzone');
       var errorElem = $('#product-images-dropzone-error');
 
       //on click image, display custom form
@@ -1324,7 +1417,7 @@ var imagesProduct = (function() {
       });
 
       var dropzoneOptions = {
-        url: dropZoneElem.attr('url-upload') + '/' + id_product,
+        url: dropZoneElem.attr('url-upload'),
         paramName: 'form[file]',
         maxFilesize: dropZoneElem.attr('data-max-size'),
         addRemoveLinks: true,
@@ -1337,12 +1430,13 @@ var imagesProduct = (function() {
         dictCancelUpload: translate_javascripts['Delete'],
         sending: function(file, response) {
           checkDropzoneMode();
-          $('#product-images-container .dropzone-expander').addClass('expand').click();
+          expanderElem.addClass('expand').click();
           errorElem.html('');
         },
         queuecomplete: function() {
           checkDropzoneMode();
           dropZoneElem.sortable('enable');
+          imagesProduct.updateExpander();
         },
         processing: function() {
           dropZoneElem.sortable('disable');
@@ -1357,6 +1451,8 @@ var imagesProduct = (function() {
 
           //define id image to file preview
           $(file.previewElement).attr('data-id', response.id);
+          $(file.previewElement).attr('url-update', response.url_update);
+          $(file.previewElement).attr('url-delete', response.url_delete);
           $(file.previewElement).addClass('ui-sortable-handle');
           if (response.cover === 1) {
             imagesProduct.updateDisplayCover(response.id);
@@ -1472,9 +1568,10 @@ var formImagesProduct = (function() {
       dropZoneElem.find(".dz-preview.active").removeClass("active");
       dropZoneElem.find(".dz-preview[data-id='"+id+"']").addClass("active");
       $.ajax({
-        url: dropZoneElem.attr('url-update') + '/' + id,
+        url: dropZoneElem.find(".dz-preview[data-id='"+id+"']").attr('url-update'),
         success: function(response) {
           formZoneElem.find('#product-images-form').html(response);
+          form.switchLanguage($('#form_switch_language').val());
         },
         complete: function() {
           toggleColDropzone(false);
@@ -1485,7 +1582,7 @@ var formImagesProduct = (function() {
     'send': function(id) {
       $.ajax({
         type: 'POST',
-        url: dropZoneElem.attr('url-update') + '/' + id,
+        url: dropZoneElem.find(".dz-preview[data-id='"+id+"']").attr('url-update'),
         data: formZoneElem.find('textarea, input').serialize(),
         beforeSend: function() {
           formZoneElem.find('.actions button').prop('disabled', 'disabled');
@@ -1520,10 +1617,11 @@ var formImagesProduct = (function() {
       modalConfirmation.create(translate_javascripts['Are you sure to delete this?'], null, {
         onContinue: function() {
           $.ajax({
-            url: dropZoneElem.attr('url-delete') + '/' + id,
+            url: dropZoneElem.find('.dz-preview[data-id="' + id + '"]').attr('url-delete'),
             complete: function() {
               formZoneElem.find('.close').click();
               dropZoneElem.find('.dz-preview[data-id="' + id + '"]').remove();
+              $('.images .product-combination-image [value=' + id + ']').parent().remove();
               imagesProduct.checkDropzoneMode();
             }
           });
@@ -1643,10 +1741,12 @@ var priceCalculation = (function() {
 
       /** update without tax price and shortcut price field on change */
       $('#form_step1_price_shortcut, #form_step2_price').keyup(function() {
+        var price = priceCalculation.normalizePrice($(this).val());
+
         if ($(this).attr('id') === 'form_step1_price_shortcut') {
-          $('#form_step2_price').val($(this).val());
+          $('#form_step2_price').val(price).change();
         } else {
-          $('#form_step1_price_shortcut').val($(this).val());
+          $('#form_step1_price_shortcut').val(price).change();
         }
 
         priceCalculation.taxInclude();
@@ -1654,10 +1754,12 @@ var priceCalculation = (function() {
 
       /** update HT price and shortcut price field on change */
       $('#form_step1_price_ttc_shortcut, #form_step2_price_ttc').keyup(function() {
+        var price = priceCalculation.normalizePrice($(this).val());
+
         if ($(this).attr('id') === 'form_step1_price_ttc_shortcut') {
-          $('#form_step2_price_ttc').val($(this).val());
+          $('#form_step2_price_ttc').val(price).change();
         } else {
-          $('#form_step1_price_ttc_shortcut').val($(this).val());
+          $('#form_step1_price_ttc_shortcut').val(price).change();
         }
 
         priceCalculation.taxExclude();
@@ -1665,8 +1767,15 @@ var priceCalculation = (function() {
 
       /** on price change, update final retails prices */
       $('#form_step2_price, #form_step2_price_ttc').change(function() {
-        $('#final_retail_price_te').text(formatCurrency(parseFloat($('#form_step2_price').val())));
-        $('#final_retail_price_ti').text(formatCurrency(parseFloat($('#form_step2_price_ttc').val())));
+        var taxExcludedPrice = priceCalculation.normalizePrice($('#form_step2_price').val());
+        var taxIncludedPrice = priceCalculation.normalizePrice($('#form_step2_price_ttc').val());
+
+        formatCurrencyCldr(parseFloat(taxExcludedPrice), function(result) {
+          $('#final_retail_price_te').text(result);
+        });
+        formatCurrencyCldr(parseFloat(taxIncludedPrice), function(result) {
+          $('#final_retail_price_ti').text(result);
+        });
       });
 
       /** update HT price and shortcut price field on change */
@@ -1688,36 +1797,43 @@ var priceCalculation = (function() {
 
       $('#form_step2_price, #form_step2_price_ttc').change();
     },
-    'taxInclude': function() {
-      var price = priceHTElem.val().replace(/,/g, '.');
-      if (isNaN(price)) {
+    'normalizePrice': function (price) {
+      price = parseFloat(price.replace(/,/g, '.'));
+
+      if (isNaN(price) || price === '') {
         price = 0;
       }
 
+      return price;
+    },
+    'addCurrentTax': function (price) {
       var rates = taxElem.find('option:selected').attr('data-rates').split(',');
       var computation_method = taxElem.find('option:selected').attr('data-computation-method');
-      var newPrice = new Number(ps_round(addTaxes(price, rates, computation_method), displayPricePrecision)) + new Number(getEcotaxTaxIncluded());
-      newPrice = truncateDecimals(newPrice, 6);
+      var priceWithTaxes = new Number(ps_round(addTaxes(price, rates, computation_method), displayPricePrecision));
+      var ecotaxIncluded = new Number(getEcotaxTaxIncluded());
 
-      priceTTCElem.val(newPrice);
-      priceTTCShorcutElem.val(newPrice);
+      return priceWithTaxes + ecotaxIncluded;
+    },
+    'taxInclude': function() {
+      var newPrice = truncateDecimals(this.addCurrentTax(this.normalizePrice(priceHTElem.val())), 6);
+
+      priceTTCElem.val(newPrice).change();
+      priceTTCShorcutElem.val(newPrice).change();
+    },
+    'removeCurrentTax': function (price) {
+      var rates = taxElem.find('option:selected').attr('data-rates').split(',');
+      var computation_method = taxElem.find('option:selected').attr('data-computation-method');
+
+      return ps_round(removeTaxes(ps_round(price - getEcotaxTaxIncluded(), displayPricePrecision), rates, computation_method), displayPricePrecision);
     },
     'taxExclude': function() {
-      var price = parseFloat(priceTTCElem.val().replace(/,/g, '.'));
-      if (isNaN(price)) {
-        price = 0;
-      }
+      var newPrice = truncateDecimals(this.removeCurrentTax(this.normalizePrice(priceTTCElem.val())), 6);
 
-      var rates = taxElem.find('option:selected').attr('data-rates').split(',');
-      var computation_method = taxElem.find('option:selected').attr('data-computation-method');
-      var newPrice = ps_round(removeTaxes(ps_round(price - getEcotaxTaxIncluded(), displayPricePrecision), rates, computation_method), displayPricePrecision);
-      newPrice = truncateDecimals(newPrice, 6);
-
-      priceHTElem.val(newPrice);
-      priceHTShortcutElem.val(newPrice);
+      priceHTElem.val(newPrice).change();
+      priceHTShortcutElem.val(newPrice).change();
     },
     'impactTaxInclude': function(obj) {
-      var price = parseFloat(obj.val().replace(/,/g, '.'));
+      var price = this.normalizePrice(obj.val());
       var targetInput = obj.closest('div[id^="combination_form_"]').find('input.attribute_priceTI');
       if (isNaN(price)) {
         targetInput.val(0);
@@ -1731,7 +1847,7 @@ var priceCalculation = (function() {
       targetInput.val(newPrice);
     },
     'impactFinalPrice': function(obj) {
-      var price = parseFloat(obj.val().replace(/,/g, '.'));
+      var price = this.normalizePrice(obj.val());
       var finalPrice = obj.closest('div[id^="combination_form_"]').find('.final-price');
       var defaultFinalPrice = finalPrice.attr('data-price');
       var priceToBeChanged = new Number(price) + new Number(defaultFinalPrice);
@@ -1740,7 +1856,7 @@ var priceCalculation = (function() {
       finalPrice.html(priceToBeChanged);
     },
     'impactTaxExclude': function(obj) {
-      var price = parseFloat(obj.val().replace(/,/g, '.'));
+      var price = this.normalizePrice(obj.val());
       var targetInput = obj.closest('div[id^="combination_form_"]').find('input.attribute_priceTE');
       if (isNaN(price)) {
         targetInput.val(0);

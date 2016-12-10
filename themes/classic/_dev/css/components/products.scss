@@ -15,6 +15,10 @@
 .product-information {
   font-size: $font-size-lg;
   color: $gray-darker;
+
+  .manufacturer-logo {
+    height: 35px;
+  }
 }
 .input-color {
   position: absolute;
@@ -403,6 +407,9 @@
   .product-unavailable {
     color: $brand-warning;
   }
+  .product-last-items {
+    color: $brand-warning;
+  }
 }
 #product-details {
   .label {
@@ -430,6 +437,9 @@
       &:nth-of-type(even) {
         background: $gray-lighter;
       }
+    }
+    dt.name {
+      text-transform: capitalize;
     }
   }
 }
@@ -502,6 +512,7 @@ li.product-flag {
     width: 100%;
     height: rem(50px);
     resize: none;
+    padding: rem(10px);
     @include placeholder {
       color: $gray;
     }

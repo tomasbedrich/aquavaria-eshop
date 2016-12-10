@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -71,6 +71,10 @@ class ProductImageController extends FrameworkBundleAdminController
         if ($request->isMethod('POST')) {
             if ($form->isValid()) {
                 $return_data = $adminProductWrapper->getInstance()->ajaxProcessaddProductImage($idProduct, 'form', false)[0];
+                $return_data = array_merge($return_data, array(
+                    'url_update' => $this->generateUrl('admin_product_image_form', array('idImage' => $return_data['id'])),
+                    'url_delete' => $this->generateUrl('admin_product_image_delete', array('idImage' => $return_data['id'])),
+                ));
             } else {
                 $error_msg = array();
                 foreach ($form->getErrors() as $key => $error) {

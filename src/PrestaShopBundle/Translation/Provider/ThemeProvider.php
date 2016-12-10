@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2016 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,17 +18,38 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author     PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2016 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShopBundle\Translation\Provider;
 
+use PrestaShop\TranslationToolsBundle\Translation\Extractor\Util\Flattenizer;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
+
 class ThemeProvider extends AbstractProvider
 {
     private $themeName;
+
+    public $themeResourcesDirectory;
+
+    /**
+     * @var Filesystem
+     */
+    public $filesystem;
+
+    /**
+     * @var \PrestaShop\PrestaShop\Core\Addon\Theme\ThemeRepository
+     */
+    public $themeRepository;
+
+    /**
+     * @var \PrestaShopBundle\Translation\Extractor\ThemeExtractor
+     */
+    public $themeExtractor;
 
     /**
      * {@inheritdoc}
@@ -60,7 +81,6 @@ class ThemeProvider extends AbstractProvider
     public function getMessageCatalogue()
     {
         $xlfCatalogue = $this->getXliffCatalogue();
-
         $databaseCatalogue = $this->getDatabaseCatalogue();
 
         // Merge database catalogue to xliff catalogue
@@ -70,11 +90,38 @@ class ThemeProvider extends AbstractProvider
     }
 
     /**
+     * @param null $baseDir
      * @return string Path to app/themes/{themeName}/translations/{locale}
      */
-    public function getResourceDirectory()
+    public function getResourceDirectory($baseDir = null)
     {
-        return $this->resourceDirectory.'/'.$this->themeName.'/translations/'.$this->getLocale();
+        if (is_null($baseDir)) {
+            $baseDir = $this->resourceDirectory;
+        }
+
+        $resourceDirectory = $baseDir.'/'.$this->themeName.'/translations/'.$this->getLocale();
+        $this->filesystem->mkdir($resourceDirectory);
+
+        return $resourceDirectory;
+    }
+
+    /**
+     * @return array
+     */
+    public function getDirectories()
+    {
+        return array(
+            $this->getResourceDirectory(),
+            $this->getThemeResourcesDirectory(),
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public function getThemeResourcesDirectory()
+    {
+        return $this->getResourceDirectory($this->themeResourcesDirectory);
     }
 
     /**
@@ -87,5 +134,50 @@ class ThemeProvider extends AbstractProvider
         $this->themeName = $themeName;
 
         return $this;
+    }
+
+    /**
+     * @param null $themeName
+     * @return \Symfony\Component\Translation\MessageCatalogue
+     */
+    public function getDatabaseCatalogue($themeName = null)
+    {
+        if (is_null($themeName)) {
+            $themeName = $this->themeName;
+        }
+
+        return parent::getDatabaseCatalogue($themeName);
+    }
+
+    public function synchronizeTheme()
+    {
+        $theme = $this->themeRepository->getInstanceByName($this->themeName);
+
+        $path = $this->resourceDirectory.'/'.$this->themeName.'/translations';
+
+        $this->filesystem->remove($path);
+        $this->filesystem->mkdir($path);
+
+        $this->themeExtractor
+            ->setOutputPath($path)
+            ->setThemeProvider($this)
+            ->extract($theme, $this->locale)
+        ;
+
+        $translationFilesPath = $path.'/'.$this->locale;
+        Flattenizer::flatten($translationFilesPath, $translationFilesPath, $this->locale, false);
+
+        $finder = Finder::create();
+        foreach ($finder->directories()->depth('== 0')->in($translationFilesPath) as $folder) {
+            $this->filesystem->remove($folder);
+        }
+    }
+
+    /**
+     * @return \Symfony\Component\Translation\MessageCatalogue
+     */
+    public function getThemeCatalogue()
+    {
+        return $this->getCatalogueFromPaths($this->getThemeResourcesDirectory(), $this->locale, '*');
     }
 }

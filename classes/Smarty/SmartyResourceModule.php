@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,43 +19,40 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 
 /**
- * Override module templates easily
+ * Override module templates easily.
  *
  * @since 1.7.0.0
  */
 class SmartyResourceModuleCore extends Smarty_Resource_Custom
 {
-    private $shop;
-
     public function __construct(array $paths)
     {
         $this->paths = $paths;
     }
 
     /**
-     * Fetch a template
+     * Fetch a template.
      *
-     * @param string $name template name
+     * @param string $name   template name
      * @param string $source template source
-     * @param integer $mtime template modification timestamp (epoch)
-     * @return void
+     * @param int    $mtime  template modification timestamp (epoch)
      */
     protected function fetch($name, &$source, &$mtime)
     {
         foreach ($this->paths as $path) {
             if (Tools::file_exists_cache($file = $path.$name)) {
                 if (_PS_MODE_DEV_) {
-                    $source = implode('', [
+                    $source = implode('', array(
                         '<!-- begin '.$file.' -->',
                         file_get_contents($file),
-                        '<!-- end '.$file.' -->'
-                    ]);
+                        '<!-- end '.$file.' -->',
+                    ));
                 } else {
                     $source = file_get_contents($file);
                 }

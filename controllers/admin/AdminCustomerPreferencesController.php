@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -37,31 +37,11 @@ class AdminCustomerPreferencesControllerCore extends AdminController
 
         parent::__construct();
 
-        $registration_process_type = array(
-            array(
-                'value' => PS_REGISTRATION_PROCESS_STANDARD,
-                'name' => $this->trans('Only account creation', array(), 'Admin.ShopParameters.Feature')
-            ),
-            array(
-                'value' => PS_REGISTRATION_PROCESS_AIO,
-                'name' => $this->trans('Standard (account creation and address creation)', array(), 'Admin.ShopParameters.Feature')
-            )
-        );
-
         $this->fields_options = array(
             'general' => array(
                 'title' =>    $this->trans('General', array(), 'Admin.Global'),
                 'icon' =>    'icon-cogs',
                 'fields' =>    array(
-                    'PS_REGISTRATION_PROCESS_TYPE' => array(
-                        'title' => $this->trans('Registration process type', array(), 'Admin.ShopParameters.Feature'),
-                        'hint' => $this->trans('The "Only account creation" registration option allows the customer to register faster, and create his/her address later.', array(), 'Admin.ShopParameters.Help'),
-                        'validation' => 'isInt',
-                        'cast' => 'intval',
-                        'type' => 'select',
-                        'list' => $registration_process_type,
-                        'identifier' => 'value'
-                    ),
                     'PS_CART_FOLLOWING' => array(
                         'title' => $this->trans('Re-display cart at login', array(), 'Admin.ShopParameters.Feature'),
                         'hint' => $this->trans('After a customer logs in, you can recall and display the content of his/her last shopping cart.', array(), 'Admin.ShopParameters.Help'),

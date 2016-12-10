@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -121,16 +121,21 @@ class FrameworkBundleAdminController extends Controller
     /**
      * Generates a documentation link
      */
-    protected function generateSidebarLink($section, $title = "Documentation")
+    protected function generateSidebarLink($section, $title = false)
     {
-        $legacyContext = $this->get('prestashop.adapter.legacy.context');
         $translator = $this->get('translator');
+        $legacyContext = $this->get('prestashop.adapter.legacy.context');
+
+        if (empty($title)) {
+            $title = $translator->trans('Help', array(), 'Admin.Global');
+        }
+
         $docLink = urlencode('http://help.prestashop.com/'.$legacyContext->getEmployeeLanguageIso().'/doc/'
             .$section.'?version='._PS_VERSION_.'&country='.$legacyContext->getEmployeeLanguageIso());
 
         return $this->generateUrl('admin_common_sidebar', [
             'url' => $docLink,
-            'title' => $translator->trans($title, [], 'AdminCommon')
+            'title' => $title,
         ]);
     }
 
@@ -181,5 +186,27 @@ class FrameworkBundleAdminController extends Controller
     protected function getResourcesDirectory()
     {
         return $this->container->getParameter('kernel.root_dir') . '/Resources';
+    }
+
+    /**
+     * @return mixed
+     */
+    protected function isDemoModeEnabled()
+    {
+        $configuration = $this->get('prestashop.adapter.legacy.configuration');
+
+        return $configuration->get('_PS_MODE_DEMO_');
+    }
+
+    /**
+     * @return string
+     */
+    protected function getDemoModeErrorMessage()
+    {
+        return $this->get('translator')->trans(
+            'This functionality has been disabled.',
+            array(),
+            'Admin.Notifications.Error'
+        );
     }
 }

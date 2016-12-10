@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -29,6 +29,7 @@ use PrestaShop\PrestaShop\Core\ContainerBuilder;
 use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerAggregate;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Exception\IOException;
 
 $container_builder = new ContainerBuilder();
 $container = $container_builder->build();
@@ -49,7 +50,12 @@ $yamlParametersFilepath = $configDirectory . '/parameters.yml';
 $filesystem = new Filesystem();
 
 $exportPhpConfigFile = function ($config, $destination) use ($filesystem) {
-    return $filesystem->dumpFile($destination, '<?php return ' . var_export($config, true). ';' . "\n");
+    try {
+        $filesystem->dumpFile($destination, '<?php return '.var_export($config, true).';'."\n");
+    } catch (IOException $e) {
+        return false;
+    }
+    return true;
 };
 
 // Bootstrap an application with parameters.yml, which has been installed before PHP parameters file support
@@ -78,6 +84,9 @@ if ($lastParametersModificationTime) {
     }
 
     $config = require_once _PS_CACHE_DIR_ . 'appParameters.php';
+    array_walk($config['parameters'], function (&$param) {
+        $param = str_replace('%%', '%', $param);
+    });
 
     $database_host = $config['parameters']['database_host'];
 
@@ -92,8 +101,14 @@ if ($lastParametersModificationTime) {
     define('_DB_PREFIX_',  $config['parameters']['database_prefix']);
     define('_MYSQL_ENGINE_',  $config['parameters']['database_engine']);
     define('_PS_CACHING_SYSTEM_',  $config['parameters']['ps_caching']);
-    define('_PS_CACHE_ENABLED_', $config['parameters']['ps_cache_enable']);
+    if (!defined('PS_IN_UPGRADE')) {
+        define('_PS_CACHE_ENABLED_', $config['parameters']['ps_cache_enable']);
+    } else {
+        define('_PS_CACHE_ENABLED_', 0);
+        $config['parameters']['ps_cache_enable'] = 0;
+    }
 
+    // Legacy cookie
     if (array_key_exists('cookie_key', $config['parameters'])) {
         define('_COOKIE_KEY_', $config['parameters']['cookie_key']);
     } else {
@@ -106,6 +121,15 @@ if ($lastParametersModificationTime) {
     } else {
         // Define cookie IV if missing to prevent failure in composer post-install script
         define('_COOKIE_IV_', Tools::passwdGen(8));
+    }
+
+    // New cookie
+    if (array_key_exists('new_cookie_key', $config['parameters'])) {
+        define('_NEW_COOKIE_KEY_', $config['parameters']['new_cookie_key']);
+    } else {
+        // Define cookie key if missing to prevent failure in composer post-install script
+        $key = PhpEncryption::createNewRandomKey();
+        define('_NEW_COOKIE_KEY_', $key);
     }
 
     define('_PS_CREATION_DATE_', $config['parameters']['ps_creation_date']);

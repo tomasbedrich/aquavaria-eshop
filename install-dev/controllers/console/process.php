@@ -19,38 +19,43 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
+use PrestaShopBundle\Install\Install;
+use PrestaShopBundle\Install\Database;
 
-class InstallControllerConsoleProcess extends InstallControllerConsole
+class InstallControllerConsoleProcess extends InstallControllerConsole implements HttpConfigureInterface
 {
 
-    protected $model_install;
+    protected $model_database;
     public $process_steps = array();
     public $previous_button = false;
 
     public function init()
     {
-        require_once _PS_INSTALL_MODELS_PATH_.'install.php';
-        require_once _PS_INSTALL_MODELS_PATH_.'database.php';
-        $this->model_install = new InstallModelInstall();
+        $this->model_install = new Install();
         $this->model_install->setTranslator($this->translator);
 
-        $this->model_database = new InstallModelDatabase();
+        $this->model_database = new Database();
         $this->model_database->setTranslator($this->translator);
     }
 
     /**
-     * @see InstallAbstractModel::processNextStep()
+     * @see HttpConfigureInterface::processNextStep()
      */
     public function processNextStep()
     {
     }
 
+    public function display()
+    {
+
+    }
+
     /**
-     * @see InstallAbstractModel::validate()
+     * @see HttpConfigureInterface::validate()
      */
     public function validate()
     {

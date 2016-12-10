@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -58,21 +58,21 @@ class AdminStatsControllerCore extends AdminStatsTabController
         } else {
             if ($granularity == 'day') {
                 $result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-				SELECT LEFT(`date_add`, 10) as date, COUNT('.($unique ? 'DISTINCT id_guest' : '*').') as visits
+				SELECT date(`date_add`) as date, COUNT('.($unique ? 'DISTINCT id_guest' : '*').') as visits
 				FROM `'._DB_PREFIX_.'connections`
 				WHERE `date_add` BETWEEN "'.pSQL($date_from).' 00:00:00" AND "'.pSQL($date_to).' 23:59:59"
 				'.Shop::addSqlRestriction().'
-				GROUP BY LEFT(`date_add`, 10)');
+				GROUP BY date(`date_add`)');
                 foreach ($result as $row) {
                     $visits[strtotime($row['date'])] = $row['visits'];
                 }
             } elseif ($granularity == 'month') {
                 $result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-				SELECT LEFT(`date_add`, 7) as date, COUNT('.($unique ? 'DISTINCT id_guest' : '*').') as visits
+				SELECT LEFT(LAST_DAY(`date_add`), 7) as date, COUNT('.($unique ? 'DISTINCT id_guest' : '*').') as visits
 				FROM `'._DB_PREFIX_.'connections`
 				WHERE `date_add` BETWEEN "'.pSQL($date_from).' 00:00:00" AND "'.pSQL($date_to).' 23:59:59"
 				'.Shop::addSqlRestriction().'
-				GROUP BY LEFT(`date_add`, 7)');
+				GROUP BY LAST_DAY(`date_add`)');
                 foreach ($result as $row) {
                     $visits[strtotime($row['date'].'-01')] = $row['visits'];
                 }

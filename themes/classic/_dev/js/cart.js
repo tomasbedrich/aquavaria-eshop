@@ -5,25 +5,30 @@ prestashop.cart = prestashop.cart || {};
 
 prestashop.cart.active_inputs = null;
 
+var spinnerSelector = 'input[name="product-quantity-spin"]';
+
 /**
  * Attach Bootstrap TouchSpin event handlers
  */
 function createSpin()
 {
-  $('input[name="product-quantity-spin"]').TouchSpin({
-    verticalbuttons: true,
-    verticalupclass: 'material-icons touchspin-up',
-    verticaldownclass: 'material-icons touchspin-down',
-    buttondown_class: 'btn btn-touchspin js-touchspin',
-    buttonup_class: 'btn btn-touchspin js-touchspin',
-    min: 1,
-    max: 1000000
+  $.each($(spinnerSelector), function (index, spinner) {
+     $(spinner).TouchSpin({
+      verticalbuttons: true,
+      verticalupclass: 'material-icons touchspin-up',
+      verticaldownclass: 'material-icons touchspin-down',
+      buttondown_class: 'btn btn-touchspin js-touchspin js-increase-product-quantity',
+      buttonup_class: 'btn btn-touchspin js-touchspin js-decrease-product-quantity',
+      min: parseInt($(spinner).attr('min'), 10),
+      max: 1000000
+    });
   });
 }
 
 
 $(document).ready(() => {
   let productLineInCartSelector = '.js-cart-line-product-quantity';
+  let promises = [];
 
   prestashop.on('updateCart', () => {
     $('.quickview').modal('hide');
@@ -31,18 +36,14 @@ $(document).ready(() => {
 
   createSpin();
 
-  prestashop.on('updatedCart', () => {
-    createSpin();
-  });
-
   let $body = $('body');
 
-  function isTouchSpin($target) {
-    return $target.hasClass('bootstrap-touchspin-up') || $target.hasClass('bootstrap-touchspin-down');
+  function isTouchSpin(namespace) {
+    return namespace === 'on.startupspin' || namespace === 'on.startdownspin';
   }
 
-  function shouldIncreaseProductQuantity($target) {
-    return $target.hasClass('bootstrap-touchspin-up');
+  function shouldIncreaseProductQuantity(namespace) {
+    return namespace === 'on.startupspin';
   }
 
   function findCartLineProductQuantityInput($target) {
@@ -74,8 +75,8 @@ $(document).ready(() => {
     return camelizedSubject;
   }
 
-  function parseCartAction($target) {
-    if (!isTouchSpin($target)) {
+  function parseCartAction($target, namespace) {
+    if (!isTouchSpin(namespace)) {
       return {
         url: $target.attr('href'),
         type: camelize($target.data('link-action'))
@@ -88,7 +89,7 @@ $(document).ready(() => {
     }
 
     let cartAction = {};
-    if (shouldIncreaseProductQuantity($target)) {
+    if (shouldIncreaseProductQuantity(namespace)) {
       cartAction = {
         url: $input.data('up-url'),
         type: 'increaseProductQuantity'
@@ -103,33 +104,110 @@ $(document).ready(() => {
     return cartAction;
   }
 
+  let abortPreviousRequests = () => {
+    var promise;
+    while (promises.length > 0) {
+      promise = promises.pop();
+      promise.abort();
+    }
+  };
+
+  var getTouchSpinInput = ($button) => {
+    return $($button.parents('.bootstrap-touchspin').find('input'));
+  };
+
+  var handleCartAction = (event) => {
+    event.preventDefault();
+
+    let $target = $(event.currentTarget);
+
+    let cartAction = parseCartAction($target, event.namespace);
+    let requestData = {
+      ajax: '1',
+      action: 'update'
+    };
+
+    if (typeof cartAction === 'undefined') {
+      return;
+    }
+
+    abortPreviousRequests();
+    $.ajax({
+      url: cartAction.url,
+      method: 'POST',
+      data: requestData,
+      dataType: 'json',
+      beforeSend: function (jqXHR) {
+        promises.push(jqXHR);
+      }
+    }).then(function (resp) {
+      var $quantityInput = getTouchSpinInput($target);
+      $quantityInput.val(resp.quantity);
+
+      // Refresh cart preview
+      prestashop.emit('updateCart', {
+        reason: $target.dataset
+      });
+    }).fail((resp) => {
+      prestashop.emit('handleError', {
+        eventType: 'updateProductInCart',
+        resp: resp,
+        cartAction: cartAction.type
+      });
+    });
+  };
+
   $body.on(
     'click',
-    '.js-cart .js-touchspin, [data-link-action="delete-from-cart"], [data-link-action="remove-voucher"]',
-    (event) => {
-      event.preventDefault();
-
-      let $target = $(event.currentTarget);
-      let cartAction = parseCartAction($target);
-      let requestData = {
-        ajax: '1',
-        action: 'update'
-      };
-
-      $.post(cartAction.url, requestData, null, 'json').then(function() {
-        // Refresh cart preview
-        prestashop.emit('updateCart', {
-          reason: $target.dataset
-        });
-      }).fail((resp) => {
-        prestashop.emit('handleError', {
-          eventType: 'updateProductInCart',
-          resp: resp,
-          cartAction: cartAction.type
-        });
-      });
-    }
+    '[data-link-action="delete-from-cart"], [data-link-action="remove-voucher"]',
+    handleCartAction
   );
+
+  $(spinnerSelector).on('touchspin.on.startdownspin', handleCartAction);
+  $(spinnerSelector).on('touchspin.on.startupspin', handleCartAction);
+
+  function sendUpdateQuantityInCartRequest(updateQuantityInCartUrl, requestData, $target) {
+    abortPreviousRequests();
+
+    return $.ajax({
+      url: updateQuantityInCartUrl,
+      method: 'POST',
+      data: requestData,
+      dataType: 'json',
+      beforeSend: function (jqXHR) {
+        promises.push(jqXHR);
+      }
+    }).then(function (resp) {
+      $target.val(resp.quantity);
+
+      var dataset;
+      if ($target) {
+        dataset = $target.dataset;
+      } else {
+        dataset = null;
+      }
+
+      // Refresh cart preview
+      prestashop.emit('updateCart', {
+        reason: dataset
+      });
+    }).fail((resp) => {
+      prestashop.emit('handleError', {eventType: 'updateProductQuantityInCart', resp: resp})
+    });
+  }
+
+  function getRequestData(quantity) {
+    return {
+      ajax: '1',
+      qty: Math.abs(quantity),
+      action: 'update',
+      op: getQuantityChangeType(quantity)
+    }
+  }
+
+  function getQuantityChangeType($quantity) {
+    return ($quantity > 0) ? 'up' : 'down';
+  }
 
   function updateProductQuantityInCart(event)
   {
@@ -139,7 +217,9 @@ $(document).ready(() => {
 
     // There should be a valid product quantity in cart
     let targetValue = $target.val();
-    if (targetValue != parseInt(targetValue) || targetValue < 0) {
+    if (targetValue != parseInt(targetValue) || targetValue < 0 || isNaN(targetValue)) {
+      $target.val(baseValue);
+
       return;
     }
 
@@ -149,23 +229,9 @@ $(document).ready(() => {
       return;
     }
 
-    let dir = (qty > 0) ? 'up' : 'down';
+    var requestData = getRequestData(qty);
 
-    var requestData = {
-      ajax: '1',
-      qty: Math.abs(qty),
-      action: 'update',
-      op: dir
-    };
-
-    $.post(updateQuantityInCartUrl, requestData, null, 'json').then(function() {
-      // Refresh cart preview
-      prestashop.emit('updateCart', {
-        reason: $target.dataset
-      });
-    }).fail((resp) => {
-        prestashop.emit('handleError', {eventType: 'updateProductQuantityInCart', resp: resp})
-    });
+    sendUpdateQuantityInCartRequest(updateQuantityInCartUrl, requestData, $target);
   }
 
   $body.on(
@@ -185,6 +251,21 @@ $(document).ready(() => {
       }
     }
   );
+
+  $body.on(
+    'click',
+    '.js-discount .code',
+    (event) => {
+      event.stopPropagation();
+
+      var $code = $(event.currentTarget);
+      var $discountInput = $('[name=discount_name]');
+
+      $discountInput.val($code.text());
+
+      return false;
+    }
+  )
 });
 
 

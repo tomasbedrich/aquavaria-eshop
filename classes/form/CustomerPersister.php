@@ -1,4 +1,29 @@
 <?php
+/**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
+
 
 use PrestaShop\PrestaShop\Core\Crypto\Hashing as Crypto;
 use Symfony\Component\Translation\TranslatorInterface;
@@ -55,7 +80,7 @@ class CustomerPersisterCore
         }
 
         if (!$customer->is_guest) {
-            $customer->passwd = $this->crypto->encrypt(
+            $customer->passwd = $this->crypto->hash(
                 $newPassword ? $newPassword : $clearTextPassword,
                 _COOKIE_KEY_
             );
@@ -88,7 +113,7 @@ class CustomerPersisterCore
         if ($clearTextPassword && $customer->is_guest) {
             $guest_to_customer = true;
             $customer->is_guest = false;
-            $customer->passwd = $this->crypto->encrypt(
+            $customer->passwd = $this->crypto->hash(
                 $clearTextPassword,
                 _COOKIE_KEY_
             );
@@ -111,8 +136,8 @@ class CustomerPersisterCore
         if ($ok) {
             $this->context->updateCustomer($customer);
             $this->context->cart->update();
-            Hook::exec('actionCustomerAccountAdd', [
-                'newCustomer' => $customer
+            Hook::exec('actionCustomerAccountUpdate', [
+                'customer' => $customer,
             ]);
             if ($guest_to_customer) {
                 $this->sendConfirmationMail($customer);
@@ -139,7 +164,7 @@ class CustomerPersisterCore
              * that guests cannot log in even with the generated
              * password. That's the case at least at the time of writing.
              */
-            $clearTextPassword = $this->crypto->encrypt(
+            $clearTextPassword = $this->crypto->hash(
                 microtime(),
                 _COOKIE_KEY_
             );
@@ -147,7 +172,7 @@ class CustomerPersisterCore
             $customer->is_guest = true;
         }
 
-        $customer->passwd = $this->crypto->encrypt(
+        $customer->passwd = $this->crypto->hash(
             $clearTextPassword,
             _COOKIE_KEY_
         );
@@ -167,8 +192,8 @@ class CustomerPersisterCore
             $this->context->updateCustomer($customer);
             $this->context->cart->update();
             $this->sendConfirmationMail($customer);
-            Hook::exec('actionCustomerAccountUpdate', array(
-                'customer' => $customer
+            Hook::exec('actionCustomerAccountAdd', array(
+                'newCustomer' => $customer,
             ));
         }
 
@@ -184,12 +209,16 @@ class CustomerPersisterCore
         return Mail::Send(
             $this->context->language->id,
             'account',
-            Mail::l('Welcome!'),
-            [
+            $this->translator->trans(
+                'Welcome!',
+                array(),
+                'Emails.Subject'
+            ),
+            array(
                 '{firstname}' => $customer->firstname,
                 '{lastname}' => $customer->lastname,
                 '{email}' => $customer->email,
-            ],
+            ),
             $customer->email,
             $customer->firstname.' '.$customer->lastname
         );

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -174,7 +174,7 @@ class AdminStoresControllerCore extends AdminController
                 ),
                 array(
                     'type' => 'text',
-                    'label' => $this->trans('Zip/postal Code', array(), 'Admin.Global'),
+                    'label' => $this->trans('Zip/postal code', array(), 'Admin.Global'),
                     'name' => 'postcode',
                     'required' => in_array('postcode', $required_fields)
                 ),
@@ -332,14 +332,14 @@ class AdminStoresControllerCore extends AdminController
 
             /* If the selected country contains states, then a state have to be selected */
             if ((int)$country->contains_states && !$id_state) {
-                $this->errors[] = $this->trans('An address located in a country containing states must have a state selected.', array(), 'Admin.Parameters.Notification');
+                $this->errors[] = $this->trans('An address located in a country containing states must have a state selected.', array(), 'Admin.ShopParameters.Notification');
             }
 
             $latitude = (float)Tools::getValue('latitude');
             $longitude = (float)Tools::getValue('longitude');
 
             if (empty($latitude) || empty($longitude)) {
-                $this->errors[] = $this->trans('Latitude and longitude are required.', array(), 'Admin.Parameters.Notification');
+                $this->errors[] = $this->trans('Latitude and longitude are required.', array(), 'Admin.ShopParameters.Notification');
             }
 
             $postcode = Tools::getValue('postcode');
@@ -522,7 +522,7 @@ class AdminStoresControllerCore extends AdminController
 						AND `id_state` = '.(int)Tools::getValue('PS_SHOP_STATE_ID');
             $isStateOk = Db::getInstance()->getValue($sql);
             if ($isStateOk != 1) {
-                $this->errors[] = $this->trans('The specified state is not located in this country.', array(), 'Admin.Parameters.Notification');
+                $this->errors[] = $this->trans('The specified state is not located in this country.', array(), 'Admin.ShopParameters.Notification');
             }
         }
     }

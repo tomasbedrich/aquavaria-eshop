@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,12 +19,13 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 
- use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Yaml\Yaml;
+use PrestaShopBundle\Install\Database;
 
 /**
  * Step 3 : configure database
@@ -32,19 +33,18 @@
 class InstallControllerHttpDatabase extends InstallControllerHttp implements HttpConfigureInterface
 {
     /**
-     * @var InstallModelDatabase
+     * @var Database
      */
     public $model_database;
 
     public function init()
     {
-        require_once _PS_INSTALL_MODELS_PATH_.'database.php';
-        $this->model_database = new InstallModelDatabase();
+        $this->model_database = new Database();
         $this->model_database->setTranslator($this->translator);
     }
 
     /**
-     * @see InstallAbstractModel::processNextStep()
+     * @see HttpConfigureInterface::processNextStep()
      */
     public function processNextStep()
     {
@@ -62,7 +62,7 @@ class InstallControllerHttpDatabase extends InstallControllerHttp implements Htt
     /**
      * Database configuration must be valid to validate this step
      *
-     * @see InstallAbstractModel::validate()
+     * @see HttpConfigureInterface::validate()
      */
     public function validate()
     {
@@ -133,13 +133,13 @@ class InstallControllerHttpDatabase extends InstallControllerHttp implements Htt
     }
 
     /**
-     * @see InstallAbstractModel::display()
+     * @see HttpConfigureInterface::display()
      */
     public function display()
     {
         if (!$this->session->database_server) {
-            if (file_exists(_PS_ROOT_DIR_.'/app/config/parameters.yml')) {
-                $parameters = Yaml::parse(file_get_contents(_PS_ROOT_DIR_.'/app/config/parameters.yml'));
+            if (file_exists(_PS_ROOT_DIR_.'/app/config/parameters.php')) {
+                $parameters = require(_PS_ROOT_DIR_.'/app/config/parameters.php');
             } else {
                 $parameters = Yaml::parse(file_get_contents(_PS_ROOT_DIR_.'/app/config/parameters.yml.dist'));
             }

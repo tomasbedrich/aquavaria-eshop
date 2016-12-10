@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -711,7 +711,7 @@ class OrderInvoiceCore extends ObjectModel
             'oip2',
             'oip2.id_order_payment = oip1.id_order_payment AND oip2.id_order_invoice <> oip1.id_order_invoice'
         );
-        $query->where('oip1.id_order_invoice = '.$this->id);
+        $query->where('oip1.id_order_invoice = '.(int) $this->id);
 
         $invoices = Db::getInstance()->executeS($query);
         if (!$invoices) {
@@ -752,7 +752,7 @@ class OrderInvoiceCore extends ObjectModel
             'oi',
             'oi.id_order_invoice = oip2.id_order_invoice'
         );
-        $query->where('oip1.id_order_invoice = '.$this->id);
+        $query->where('oip1.id_order_invoice = '.(int) $this->id);
 
         $row = Db::getInstance()->getRow($query);
 

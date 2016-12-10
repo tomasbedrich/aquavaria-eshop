@@ -5,13 +5,19 @@
   "require": {
     "php": ">=5.4",
     "symfony/symfony": "~2.8.6",
+    "defuse/php-encryption": "~2.0.1",
     "doctrine/dbal": "~2.5.3",
+    "doctrine/cache": "~1.6|~1.5",
     "doctrine/common": "~2.5.3",
     "doctrine/orm": "~2.5.3",
+    "twig/twig": "~1.26.0",
+    "ext-curl": "*",
+    "ext-intl": "*",
     "ext-zip": "*",
     "geoip2/geoip2": "~2.4.2",
     "doctrine/doctrine-bundle": "1.5.2",
     "mrclay/minify": "~2.3.0",
+    "matthiasmullie/minify": "~1.3.0",
     "jakeasmith/http_build_url": "^1",
     "mobiledetect/mobiledetectlib": "~2.8.22",
     "symfony/swiftmailer-bundle": "2.3.11",
@@ -30,8 +36,9 @@
     "ircmaxell/random-lib": "*",
     "shudrum/array-finder": "1.1.0",
     "phpoffice/phpexcel": "1.8",
-    "guzzlehttp/guzzle": "~4.0",
+    "guzzlehttp/guzzle": "~5.0",
     "csa/guzzle-bundle": "~1.3",
+    "paragonie/random_compat": "^1.4|^2.0",
     "prestashop/smarty": "dev-master",
     "prestashop/blockreassurance": "dev-master",
     "prestashop/contactform": "dev-master",
@@ -87,7 +94,9 @@
     "prestashop/statsvisits": "dev-master",
     "prestashop/trackingfront": "dev-master",
     "prestashop/welcome": "dev-master",
-    "prestashop/dashtrends": "dev-master"
+    "prestashop/dashtrends": "dev-master",
+    "beberlei/DoctrineExtensions": "^1.0",
+    "composer/ca-bundle": "^1.0"
   },
   "require-dev": {
     "phpunit/phpunit": "~4.5",
@@ -109,19 +118,14 @@
   },
   "scripts": {
     "post-install-cmd": [
-      "PrestaShopBundle\\Utils\\Migrate::migrateSettingsFile",
-      "Incenteev\\ParameterHandler\\ScriptHandler::buildParameters",
       "PrestaShop\\PrestaShop\\Core\\Cldr\\Composer\\Hook::init",
-      "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::buildBootstrap",
-      "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::clearCache",
-      "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installAssets",
-      "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installRequirementsFile",
-      "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::prepareDeploymentTarget"
-    ],
+          "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::buildBootstrap",
+          "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installRequirementsFile",
+          "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::prepareDeploymentTarget"
+        ],
     "post-update-cmd": [
-      "PrestaShopBundle\\Utils\\Migrate::migrateSettingsFile",
-      "Incenteev\\ParameterHandler\\ScriptHandler::buildParameters",
       "PrestaShop\\PrestaShop\\Core\\Cldr\\Composer\\Hook::init",
+      "PrestaShopBundle\\Install\\Upgrade::migrateSettingsFile",
       "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::buildBootstrap",
       "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::clearCache",
       "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installAssets",
@@ -134,7 +138,10 @@
     "phpunit-sf": "php bin/phpunit -c admin-dev/"
   },
   "config": {
-    "bin-dir": "bin"
+    "bin-dir": "bin",
+    "platform": {
+      "php": "5.4.0"
+    }
   },
   "extra": {
     "symfony-app-dir": "app",

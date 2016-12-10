@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,12 +19,13 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 use PrestaShop\PrestaShop\Adapter\Product\PriceFormatter;
 use PrestaShop\PrestaShop\Adapter\Image\ImageRetriever;
+use PrestaShop\PrestaShop\Core\Product\ProductExtraContentFinder;
 use PrestaShop\PrestaShop\Core\Product\ProductListingPresenter;
 use PrestaShop\PrestaShop\Adapter\Product\ProductColorsRetriever;
 use PrestaShop\PrestaShop\Core\Addon\Module\ModuleManagerBuilder;
@@ -291,6 +292,15 @@ class ProductControllerCore extends ProductPresentingFrontControllerCore
             }
 
             $product_for_template = $this->getTemplateVarProduct();
+            $productManufacturer = new Manufacturer((int) $this->product->id_manufacturer, $this->context->language->id);
+
+            $manufacturerImageUrl = $this->context->link->getManufacturerImageLink($productManufacturer->id);
+            $undefinedImage = $this->context->link->getManufacturerImageLink(null);
+            if ($manufacturerImageUrl === $undefinedImage) {
+                $manufacturerImageUrl = null;
+            }
+            
+            $productBrandUrl = $this->context->link->getManufacturerLink($productManufacturer->id);
 
             $this->context->smarty->assign(array(
                 'priceDisplay' => $priceDisplay,
@@ -300,7 +310,9 @@ class ProductControllerCore extends ProductPresentingFrontControllerCore
                 'accessories' => $accessories,
                 'product' => $product_for_template,
                 'displayUnitPrice' => (!empty($this->product->unity) && $this->product->unit_price_ratio > 0.000000) ? true : false,
-                'product_manufacturer' => new Manufacturer((int) $this->product->id_manufacturer, $this->context->language->id),
+                'product_manufacturer' => $productManufacturer,
+                'manufacturer_image_url' => $manufacturerImageUrl,
+                'product_brand_url' => $productBrandUrl,
             ));
 
             // Assign attribute groups to the template
@@ -806,6 +818,8 @@ class ProductControllerCore extends ProductPresentingFrontControllerCore
     public function getTemplateVarProduct()
     {
         $productSettings = $this->getProductPresentationSettings();
+        // Hook displayProductExtraContent
+        $extraContentFinder = new ProductExtraContentFinder();
 
         $product = $this->objectPresenter->present($this->product);
         $product['id_product'] = (int) $this->product->id;
@@ -814,6 +828,7 @@ class ProductControllerCore extends ProductPresentingFrontControllerCore
         $product['id_product_attribute'] = (int) Tools::getValue('id_product_attribute');
         $product['minimal_quantity'] = $this->getProductMinimalQuantity($product);
         $product['quantity_wanted'] = $this->getRequiredQuantity($product);
+        $product['extraContent'] = $extraContentFinder->addParams(array('product' => $this->product))->present();
 
         $product_full = Product::getProductProperties($this->context->language->id, $product, $this->context);
 
@@ -914,7 +929,9 @@ class ProductControllerCore extends ProductPresentingFrontControllerCore
             }
         }
 
-        $breadcrumb['links'][] = $this->getCategoryPath($categoryDefault);
+        if (!$categoryDefault->is_root_category) {
+            $breadcrumb['links'][] = $this->getCategoryPath($categoryDefault);
+        }
 
         $breadcrumb['links'][] = array(
             'title' => $this->context->controller->product->name,

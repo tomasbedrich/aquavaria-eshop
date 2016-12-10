@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,10 +19,14 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
+
+use PrestaShopBundle\Install\LanguageList;
+use PrestaShopBundle\Install\AbstractInstall;
+
 abstract class InstallControllerConsole
 {
     /**
@@ -55,9 +59,9 @@ abstract class InstallControllerConsole
     public $language;
 
     /**
-     * @var InstallAbstractModel
+     * @var AbstractInstall
      */
-    public $model;
+    protected $model_install;
 
     /**
      * Validate current step.

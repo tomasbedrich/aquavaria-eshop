@@ -1,7 +1,7 @@
 <?php
 
 /**
- * 2007-2016 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -34,9 +34,9 @@ interface UseDefaultCatalogueInterface
      *
      * @param bool $empty if true, empty the catalogue
      *
-     * @return string[] Return a default catalogue with all keys
+     * @return \Symfony\Component\Translation\MessageCatalogueInterface Return a default catalogue with all keys
      */
-    public function getDefaultCatalogue($empty);
+    public function getDefaultCatalogue($empty = true);
 
     /**
      * @return string Path to app/Resources/translations/default/{locale}

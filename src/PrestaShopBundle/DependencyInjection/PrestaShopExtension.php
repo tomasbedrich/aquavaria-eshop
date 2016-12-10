@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -40,8 +40,28 @@ class PrestaShopExtension extends Extension
      */
     public function load(array $configs, ContainerBuilder $container)
     {
+        $configuration = new AddOnsConfiguration();
+        $config = $this->processConfiguration($configuration, $configs);
+
         $loader = new YamlFileLoader($container, new FileLocator(dirname(__DIR__).'/Resources/config'));
         $loader->load('services.yml');
+
+        $hasVerifySslParameter = $container->hasParameter('addons.api_client.verify_ssl');
+
+        if ($hasVerifySslParameter) {
+            $verifySsl = $container->getParameter('addons.api_client.verify_ssl');
+        } else {
+            $verifySsl = $config['addons']['api_client']['verify_ssl'];
+        }
+
+        $container->setParameter('prestashop.addons.api_client.verify_ssl', $verifySsl);
+        if (!$container->hasParameter('prestashop.addons.api_client.ttl')) {
+            $container->setParameter('prestashop.addons.api_client.ttl', $config['addons']['api_client']['ttl']);
+        }
+
+        $this->addClassesToCompile(array(
+            $container->getDefinition('prestashop.router')->getClass(),
+        ));
     }
 
     /**
@@ -49,6 +69,6 @@ class PrestaShopExtension extends Extension
      */
     public function getAlias()
     {
-        return 'prestashop_bundle';
+        return 'prestashop';
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,10 +18,10 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author 	PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2015 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 namespace PrestaShop\PrestaShop\Core\Cldr\Composer;
 
@@ -42,18 +42,22 @@ class Hook
      * @throws \Exception
      * @throws \PrestaShopDatabaseException
      */
-    public static function init(Event $event)
+    public static function init(Event $event = null)
     {
-        $event->getIO()->write("Init CLDR data download...");
-        $root_dir = realpath('');
+        if ($event) {
+            $event->getIO()->write("Init CLDR data download...");
+        }
+        $root_dir = realpath(__DIR__.'/../../../../');
 
         $cldr_update = new Update($root_dir.'/translations/');
         $cldr_update->init();
 
         // If settings file exist
-        if (file_exists($root_dir.'/config/settings.inc.php')) {
+        if (file_exists($root_dir.'/app/config/parameters.php')) {
             //load prestashop config to get locale env
-            require($root_dir.'/config/config.inc.php');
+            if (!defined('_PS_ROOT_DIR_')) {
+                require_once($root_dir.'/config/config.inc.php');
+            }
 
             //get each defined languages and fetch cldr datas
             $langs = \DbCore::getInstance()->executeS('SELECT * FROM '._DB_PREFIX_.'lang');
@@ -66,7 +70,8 @@ class Hook
                 $cldr_update->fetchLocale($language_code['0'].'-'.strtoupper($language_code[1]));
             }
         }
-
-        $event->getIO()->write("Finished...");
+        if ($event) {
+            $event->getIO()->write("Finished...");
+        }
     }
 }

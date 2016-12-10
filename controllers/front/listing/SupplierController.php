@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -144,11 +144,11 @@ class SupplierControllerCore extends ProductListingFrontController
         foreach ($suppliers as $supplier) {
             $suppliers_for_display[$supplier['id_supplier']] = $supplier;
             $suppliers_for_display[$supplier['id_supplier']]['text'] = $supplier['description'];
-            $suppliers_for_display[$supplier['id_supplier']]['image'] = _THEME_SUP_DIR_.$supplier['id_supplier'].'-medium_default.jpg';
+            $suppliers_for_display[$supplier['id_supplier']]['image'] = $this->context->link->getSupplierImageLink($supplier['id_supplier'], 'small_default');
             $suppliers_for_display[$supplier['id_supplier']]['url'] = $this->context->link->getsupplierLink($supplier['id_supplier']);
             $suppliers_for_display[$supplier['id_supplier']]['nb_products'] = $supplier['nb_products'] > 1
-                ? $this->trans('%N% products', array('%N%' => $supplier['nb_products']), 'Shop.Theme.Catalog')
-                : $this->trans('%N% product', array('%N%' => $supplier['nb_products']), 'Shop.Theme.Catalog');
+                ? $this->trans('%number% products', array('%number%' => $supplier['nb_products']), 'Shop.Theme.Catalog')
+                : $this->trans('%number% product', array('%number%' => $supplier['nb_products']), 'Shop.Theme.Catalog');
         }
 
         return $suppliers_for_display;

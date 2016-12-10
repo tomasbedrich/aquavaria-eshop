@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -50,6 +50,7 @@ class HelperShopCore extends Helper
 
         $tpl = $this->createTemplate('helpers/shops_list/list.tpl');
         $tpl->assign(array(
+            'link' => $context->link,
             'tree' => Shop::getTree(),
             'current_shop_name' => $this->getCurrentShopName(),
             'current_shop_value' => $current_shop_value,
@@ -57,6 +58,7 @@ class HelperShopCore extends Helper
             'multishop_context_group' => $context->controller->multishop_context_group,
             'is_shop_context'  => ($context->controller->multishop_context & Shop::CONTEXT_SHOP),
             'is_group_context' => ($context->controller->multishop_context & Shop::CONTEXT_GROUP),
+            'is_all_context' => ($context->controller->multishop_context & Shop::CONTEXT_ALL),
             'shop_context' => $shop_context,
             'url' => $_SERVER['REQUEST_URI'].(($_SERVER['QUERY_STRING']) ? '&' : '?').'setShopContext='
         ));

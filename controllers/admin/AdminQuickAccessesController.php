@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -234,10 +234,10 @@ class AdminQuickAccessesControllerCore extends AdminController
             if ($object->toggleNewWindow()) {
                 $this->redirect_after = self::$currentIndex.'&conf=5&token='.$this->token;
             } else {
-                $this->errors[] = $this->trans('An error occurred while updating new window property.', array(), 'Admin.Parameters.Notification');
+                $this->errors[] = $this->trans('An error occurred while updating new window property.', array(), 'Admin.Navigation.Notification');
             }
         } else {
-            $this->errors[] = $this->trans('An error occurred while updating the new window property for this object.', array(), 'Admin.Parameters.Notification').
+            $this->errors[] = $this->trans('An error occurred while updating the new window property for this object.', array(), 'Admin.Navigation.Notification').
                 ' <b>'.$this->table.'</b> '.
                 $this->trans('(cannot load object)', array(), 'Admin.Notifications.Error');
         }

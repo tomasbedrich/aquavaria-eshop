@@ -1,7 +1,7 @@
 <?php
 
 /**
- * 2007-2016 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -30,6 +30,7 @@ namespace PrestaShopBundle\Translation\Extractor;
 use PrestaShop\PrestaShop\Core\Addon\Theme\Theme;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\SmartyExtractor;
 use PrestaShop\TranslationToolsBundle\Translation\Dumper\XliffFileDumper;
+use PrestaShopBundle\Translation\Provider\ThemeProvider;
 use Symfony\Component\Translation\Dumper\FileDumper;
 use Symfony\Component\Translation\MessageCatalogue;
 
@@ -45,11 +46,21 @@ class ThemeExtractor
     private $format = 'xlf';
     private $outputPath;
     private $smartyExtractor;
+    private $themeProvider;
+
+    private $overrideFromDatabase = false;
 
     public function __construct(SmartyExtractor $smartyExtractor)
     {
         $this->smartyExtractor = $smartyExtractor;
         $this->dumpers[] = new XliffFileDumper();
+    }
+
+    public function setThemeProvider(ThemeProvider $themeProvider)
+    {
+        $this->themeProvider = $themeProvider;
+
+        return $this;
     }
 
     public function extract(Theme $theme, $locale = 'en-US')
@@ -58,8 +69,15 @@ class ThemeExtractor
         // remove the last "/"
         $themeDirectory = substr($theme->getDirectory(), 0, -1);
 
-        $options = array('path' => $themeDirectory);
+        $options = array(
+            'path' => $themeDirectory,
+            'default_locale' => $locale,
+        );
         $this->smartyExtractor->extract($themeDirectory, $this->catalog);
+
+        if ($this->overrideFromDatabase) {
+            $this->overrideFromDatabase($theme->getName(), $locale, $this->catalog);
+        }
 
         foreach ($this->dumpers as $dumper) {
             if ($this->format === $dumper->getExtension()) {
@@ -72,6 +90,21 @@ class ThemeExtractor
         }
 
         throw new \LogicException(sprintf('The format %s is not supported.', $this->format));
+    }
+
+    private function overrideFromDatabase($themeName, $locale, &$catalogue)
+    {
+        if (is_null($this->themeProvider)) {
+            throw new \Exception('Theme provider is required.');
+        }
+
+        $databaseCatalogue = $this->themeProvider
+            ->setLocale($locale)
+            ->setThemeName($themeName)
+            ->getDatabaseCatalogue()
+        ;
+
+        $catalogue->addCatalogue($databaseCatalogue);
     }
 
     public function addDumper(FileDumper $dumper)
@@ -113,5 +146,19 @@ class ThemeExtractor
     public function getCatalog()
     {
         return $this->catalog;
+    }
+
+    public function disableOverridingFromDatabase()
+    {
+        $this->overrideFromDatabase = false;
+
+        return $this;
+    }
+
+    public function enableOverridingFromDatabase()
+    {
+        $this->overrideFromDatabase = true;
+
+        return $this;
     }
 }

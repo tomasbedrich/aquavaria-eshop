@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -830,7 +830,7 @@ class ProductCore extends ObjectModel
         if ($id_product_attribute === null) {
             $sql .= ' p.`available_date`';
         } else {
-            $sql .= ' IF(pa.`available_date` = "0000-00-00", p.`available_date`, pa.`available_date`) AS available_date';
+            $sql .= ' pa.`available_date`';
         }
 
         $sql .= ' FROM `'._DB_PREFIX_.'product` p';
@@ -1046,6 +1046,9 @@ class ProductCore extends ObjectModel
         }
 
         Db::getInstance()->insert('category_product', $product_cats);
+
+        Cache::clean('Product::getProductCategories_'.(int)$this->id);
+
         return true;
     }
 
@@ -1068,7 +1071,7 @@ class ProductCore extends ObjectModel
 			LEFT JOIN `'._DB_PREFIX_.'category` c ON (c.`id_category` = cp.`id_category`)
 			'.Shop::addSqlAssociation('category', 'c', true, null, true).'
 			WHERE cp.`id_category` NOT IN ('.implode(',', array_map('intval', $categories)).')
-			AND cp.id_product = '.$this->id
+			AND cp.id_product = '.(int) $this->id
         );
 
         // if none are found, it's an error
@@ -1085,6 +1088,9 @@ class ProductCore extends ObjectModel
         }
 
         SpecificPriceRule::applyAllRules(array((int)$this->id));
+
+        Cache::clean('Product::getProductCategories_'.(int)$this->id);
+
         return true;
     }
 
@@ -1110,7 +1116,11 @@ class ProductCore extends ObjectModel
                 self::cleanPositions((int)$row['id_category'], (int)$row['position']);
             }
         }
+
         SpecificPriceRule::applyAllRules(array((int)$this->id));
+
+        Cache::clean('Product::getProductCategories_'.(int)$this->id);
+
         return $return;
     }
 
@@ -1136,6 +1146,8 @@ class ProductCore extends ObjectModel
                 $return &= self::cleanPositions((int)$row['id_category'], (int)$row['position']);
             }
         }
+
+        Cache::clean('Product::getProductCategories_'.(int)$this->id);
 
         return $return;
     }
@@ -1401,7 +1413,21 @@ class ProductCore extends ObjectModel
             }
         }
 
+
         return $res;
+    }
+
+    public function sortCombinationByAttributePosition($combinations, $langId)
+    {
+        $attributes = [];
+        foreach ($combinations as $combinationId) {
+            $attributeCombination = $this->getAttributeCombinationsById($combinationId, $langId);
+            $attributes[$attributeCombination[0]["position"]][$combinationId] = $attributeCombination[0];
+        }
+
+        ksort($attributes);
+
+        return $attributes;
     }
 
     /**
@@ -2283,7 +2309,7 @@ class ProductCore extends ObjectModel
         if (Group::isFeatureActive()) {
             $groups = FrontController::getCurrentCustomerGroups();
             $sql_groups = ' AND EXISTS(SELECT 1 FROM `'._DB_PREFIX_.'category_product` cp
-				JOIN `'._DB_PREFIX_.'category_group` cg ON (cp.id_category = cg.id_category AND cg.`id_group` '.(count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1').')
+				JOIN `'._DB_PREFIX_.'category_group` cg ON (cp.id_category = cg.id_category AND cg.`id_group` '.(count($groups) ? 'IN ('.implode(',', $groups).')' : '= '.(int)Configuration::get('PS_UNIDENTIFIED_GROUP')).')
 				WHERE cp.`id_product` = p.`id_product`)';
         }
 
@@ -2586,7 +2612,7 @@ class ProductCore extends ObjectModel
 		LEFT JOIN `'._DB_PREFIX_.'manufacturer` m ON (m.`id_manufacturer` = p.`id_manufacturer`)
 		WHERE product_shop.`active` = 1
 		AND product_shop.`show_price` = 1
-		'.($front ? ' AND p.`visibility` IN ("both", "catalog")' : '').'
+		'.($front ? ' AND product_shop.`visibility` IN ("both", "catalog")' : '').'
 		'.((!$beginning && !$ending) ? ' AND p.`id_product` IN ('.((is_array($tab_id_product) && count($tab_id_product)) ? implode(', ', $tab_id_product) : 0).')' : '').'
 		'.$sql_groups.'
 		ORDER BY '.(isset($order_by_prefix) ? pSQL($order_by_prefix).'.' : '').pSQL($order_by).' '.pSQL($order_way).'
@@ -3075,10 +3101,14 @@ class ProductCore extends ObjectModel
                 $ecotax = Tools::convertPrice($ecotax, $id_currency);
             }
             if ($use_tax) {
+                static $psEcotaxTaxRulesGroupId = null;
+                if ($psEcotaxTaxRulesGroupId === null) {
+                    $psEcotaxTaxRulesGroupId = (int) Configuration::get('PS_ECOTAX_TAX_RULES_GROUP_ID');
+                }
                 // reinit the tax manager for ecotax handling
                 $tax_manager = TaxManagerFactory::getManager(
                     $address,
-                    (int) Configuration::get('PS_ECOTAX_TAX_RULES_GROUP_ID')
+                    $psEcotaxTaxRulesGroupId
                 );
                 $ecotax_tax_calculator = $tax_manager->getTaxCalculator();
                 $price += $ecotax_tax_calculator->addTaxes($ecotax);
@@ -3304,7 +3334,7 @@ class ProductCore extends ObjectModel
         $id_shop = ($shop !== null ? (int)$shop->id : null);
         $sql = (($inner_join) ? ' INNER ' : ' LEFT ')
             .'JOIN '._DB_PREFIX_.'stock_available stock
-			ON (stock.id_product = '.pSQL($product_alias).'.id_product';
+			ON (stock.id_product = `'.bqSQL($product_alias).'`.id_product';
 
         if (!is_null($product_attribute)) {
             if (!Combination::isFeatureActive()) {
@@ -4140,7 +4170,7 @@ class ProductCore extends ObjectModel
         if (($customization_labels = Db::getInstance()->executeS('
 			SELECT `id_customization_field`, `id_lang`, `name`
 			FROM `'._DB_PREFIX_.'customization_field_lang`
-			WHERE `id_customization_field` IN ('.implode(', ', $customization_field_ids).')'.($id_shop ? ' AND cfl.`id_shop` = '.$id_shop : '').'
+			WHERE `id_customization_field` IN ('.implode(', ', $customization_field_ids).')'.($id_shop ? ' AND cfl.`id_shop` = '.(int)$id_shop : '').'
 			ORDER BY `id_customization_field`')) === false) {
             return false;
         }
@@ -4416,6 +4446,11 @@ class ProductCore extends ObjectModel
                 $id_product_attribute,
                 isset($row['cache_is_pack']) ? $row['cache_is_pack'] : null
             );
+
+            $row['available_date'] = Product::getAvailableDate(
+                (int)$row['id_product'],
+                $id_product_attribute
+            );
         }
 
         $row['id_image'] = Product::defineProductImage($row, $id_lang);
@@ -4594,7 +4629,7 @@ class ProductCore extends ObjectModel
 			FROM `'._DB_PREFIX_.'customized_data` cd
 			NATURAL JOIN `'._DB_PREFIX_.'customization` c
 			LEFT JOIN `'._DB_PREFIX_.'customization_field_lang` cfl ON (cfl.id_customization_field = cd.`index` AND id_lang = '.(int)$id_lang.
-                ($id_shop ? ' AND cfl.`id_shop` = '.$id_shop : '').')
+                ($id_shop ? ' AND cfl.`id_shop` = '.(int)$id_shop : '').')
 			WHERE c.`id_cart` = '.(int)$id_cart.
             ($only_in_cart ? ' AND c.`in_cart` = 1' : '').
             ((int)$id_customization ? ' AND cd.`id_customization` = '.(int)$id_customization : '').'
@@ -4797,7 +4832,7 @@ class ProductCore extends ObjectModel
 
         foreach ($languages as $language) {
             foreach (Shop::getContextListShopID() as $id_shop) {
-                $values .= '('.(int)$id_customization_field.', '.(int)$language['id_lang'].', '.$id_shop .',\'\'), ';
+                $values .= '('.(int)$id_customization_field.', '.(int)$language['id_lang'].', '.(int)$id_shop .',\'\'), ';
             }
         }
 
@@ -4849,7 +4884,7 @@ class ProductCore extends ObjectModel
                 if (Shop::isFeatureActive()) {
                     foreach (Shop::getContextListShopID() as $id_shop) {
                         if (!Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_.'customization_field_lang`
-						(`id_customization_field`, `id_lang`, `id_shop`, `name`) VALUES ('.(int)$tmp[2].', '.(int)$tmp[3].', '.$id_shop.', \''.pSQL($value).'\')
+						(`id_customization_field`, `id_lang`, `id_shop`, `name`) VALUES ('.(int)$tmp[2].', '.(int)$tmp[3].', '.(int)$id_shop.', \''.pSQL($value).'\')
 						ON DUPLICATE KEY UPDATE `name` = \''.pSQL($value).'\'')) {
                             return false;
                         }
@@ -4904,7 +4939,7 @@ class ProductCore extends ObjectModel
 			FROM `'._DB_PREFIX_.'customization_field` cf
 			NATURAL JOIN `'._DB_PREFIX_.'customization_field_lang` cfl
 			WHERE cf.`id_product` = '.(int)$this->id.($id_lang ? ' AND cfl.`id_lang` = '.(int)$id_lang : '').
-                ($id_shop ? ' AND cfl.`id_shop` = '.$id_shop : '').
+                ($id_shop ? ' AND cfl.`id_shop` = '.(int)$id_shop : '').
                 ($front ? ' AND !cf.`is_module`' : '').'
 			ORDER BY cf.`id_customization_field`')) {
             return false;
@@ -5408,7 +5443,7 @@ class ProductCore extends ObjectModel
             if (in_array($id, $all_ids)) {
                 Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'product_attribute` SET id_product = '.(int)$this->id.' WHERE id_product_attribute='.$id);
             } else {
-                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_.'product_attribute` (`id_product`) VALUES ('.$this->id.')');
+                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_.'product_attribute` (`id_product`) VALUES ('.(int)$this->id.')');
             }
         }
         return true;
@@ -5533,7 +5568,7 @@ class ProductCore extends ObjectModel
     {
         return Db::getInstance()->executeS('SELECT `id_stock_available` id, `id_product_attribute`
 			FROM `'._DB_PREFIX_.'stock_available`
-			WHERE `id_product`='.($this->id).StockAvailable::addSqlShopRestriction());
+			WHERE `id_product`='.(int)$this->id.StockAvailable::addSqlShopRestriction());
     }
 
     public function getWsTags()
@@ -5647,7 +5682,7 @@ class ProductCore extends ObjectModel
 
         if (!Cache::isStored($cache_id)) {
             $result = Db::getInstance()->executeS('
-			SELECT a.`id_attribute`, a.`id_attribute_group`, al.`name`, agl.`name` as `group`
+			SELECT a.`id_attribute`, a.`id_attribute_group`, al.`name`, agl.`name` as `group`, pa.`reference`, pa.`ean13`, pa.`isbn`,pa.`upc`
 			FROM `'._DB_PREFIX_.'attribute` a
 			LEFT JOIN `'._DB_PREFIX_.'attribute_lang` al
 				ON (al.`id_attribute` = a.`id_attribute` AND al.`id_lang` = '.(int)$id_lang.')
@@ -5674,7 +5709,7 @@ class ProductCore extends ObjectModel
     public static function getAttributesInformationsByProduct($id_product)
     {
         $result = Db::getInstance()->executeS('
-        SELECT DISTINCT a.`id_attribute`, a.`id_attribute_group`, al.`name` as `attribute`, agl.`name` as `group`
+        SELECT DISTINCT a.`id_attribute`, a.`id_attribute_group`, al.`name` as `attribute`, agl.`name` as `group`,pa.`reference`, pa.`ean13`, pa.`isbn`,pa.`upc`
         FROM `'._DB_PREFIX_.'attribute` a
         LEFT JOIN `'._DB_PREFIX_.'attribute_lang` al
             ON (a.`id_attribute` = al.`id_attribute` AND al.`id_lang` = '.(int)Context::getContext()->language->id.')
@@ -5700,7 +5735,7 @@ class ProductCore extends ObjectModel
         SELECT pac.`id_product_attribute`
         FROM `'._DB_PREFIX_.'product_attribute_combination` pac
         INNER JOIN `'._DB_PREFIX_.'product_attribute` pa ON pa.id_product_attribute = pac.id_product_attribute
-        WHERE id_product = '.(int)$id_product.' AND id_attribute IN ('.implode(',', $id_attributes).')
+        WHERE id_product = '.(int)$id_product.' AND id_attribute IN ('.implode(',', array_map('intval', $id_attributes)).')
         GROUP BY id_product_attribute
         HAVING COUNT(id_product) = '.count($id_attributes));
     }

@@ -1,4 +1,29 @@
 <?php
+/**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
+
 
 namespace PrestaShopBundle\Controller\Admin;
 
@@ -9,6 +34,7 @@ use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use PhpEncryption;
 
 class AddonsController extends Controller
 {
@@ -21,6 +47,7 @@ class AddonsController extends Controller
     {
         $addonsProvider = $this->container->get('prestashop.core.admin.data_provider.addons_interface');
         $modulesProvider = $this->container->get('prestashop.core.admin.data_provider.module_interface');
+        $translator = $this->container->get('translator');
         $response = new JsonResponse();
 
         // Parameters needed in order to authenticate the merchant : login and password
@@ -35,8 +62,14 @@ class AddonsController extends Controller
 
             Configuration::updateValue('PS_LOGGED_ON_ADDONS', 1);
 
-            $response->headers->setCookie(new Cookie('username_addons', $params['username_addons']));
-            $response->headers->setCookie(new Cookie('password_addons', $params['password_addons']));
+            $phpEncryption = new PhpEncryption(_NEW_COOKIE_KEY_);
+
+            $response->headers->setCookie(
+                new Cookie('username_addons', $phpEncryption->encrypt($params['username_addons']))
+            );
+            $response->headers->setCookie(
+                new Cookie('password_addons', $phpEncryption->encrypt($params['password_addons']))
+            );
             $response->headers->setCookie(new Cookie('is_contributor', (int)$json->is_contributor));
 
             $response->setData(['success' => 1, 'message' => '']);
@@ -44,7 +77,9 @@ class AddonsController extends Controller
         } catch (Exception $e) {
             $response->setData([
                 'success' => 0,
-                'message' => $e->getMessage(),
+                'message' => $translator->trans('PrestaShop was unable to log in to Addons. Please check your credentials and your Internet connection.',
+                        array(),
+                        'Admin.Notifications.Error'),
             ]);
         }
 

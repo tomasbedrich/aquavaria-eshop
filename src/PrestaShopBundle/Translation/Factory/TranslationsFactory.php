@@ -1,7 +1,7 @@
 <?php
 
 /**
- * 2007-2016 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -27,9 +27,10 @@
 
 namespace PrestaShopBundle\Translation\Factory;
 
-use PrestaShopBundle\Translation\Provider\ProviderInterface;
+use PrestaShopBundle\Translation\Provider\AbstractProvider;
 use PrestaShopBundle\Translation\Provider\UseDefaultCatalogueInterface;
 use Symfony\Component\Translation\MessageCatalogue;
+use Symfony\Component\Translation\MessageCatalogueInterface;
 
 /**
  * This class returns a collection of translations, using locale and identifier.
@@ -47,6 +48,8 @@ class TranslationsFactory implements TranslationsFactoryInterface
      * @param string $locale           Locale identifier
      *
      * @return MessageCatalogue A MessageCatalogue instance
+     *
+     * @throws ProviderNotFoundException
      */
     public function createCatalogue($domainIdentifier, $locale = 'en_US')
     {
@@ -56,7 +59,7 @@ class TranslationsFactory implements TranslationsFactoryInterface
             }
         }
 
-        // throw an exception
+        throw new ProviderNotFoundException($domainIdentifier);
     }
 
     /**
@@ -64,28 +67,28 @@ class TranslationsFactory implements TranslationsFactoryInterface
      *
      * @param string $domainIdentifier Domain identifier
      * @param string $locale           Locale identifier
+     * @param string $theme            Theme name
      *
      * @return array Translation tree structure
+     *
+     * @throws ProviderNotFoundException
      */
-    public function createTranslationsArray($domainIdentifier, $locale = 'en_US')
+    public function createTranslationsArray($domainIdentifier, $locale = self::DEFAULT_LOCALE, $theme = null)
     {
         foreach ($this->providers as $provider) {
             if ($domainIdentifier === $provider->getIdentifier()) {
-                // set locale
                 $provider->setLocale($locale);
 
                 $catalogue = $provider->getXliffCatalogue();
-
-                if ($provider instanceof UseDefaultCatalogueInterface) {
-                    $catalogue = $this->getTranslationsWithSources($provider, $catalogue);
-                }
+                $catalogue = $this->addDefaultTranslations($provider, $catalogue);
 
                 $translations = $catalogue->all();
-
-                $databaseCatalogue = $provider->getDatabaseCatalogue()->all();
+                $databaseCatalogue = $provider->getDatabaseCatalogue($theme)->all();
 
                 foreach ($translations as $domain => $messages) {
                     $databaseDomain = str_replace('.'.$locale, '', $domain);
+
+                    $missingTranslations = 0;
 
                     foreach ($messages as $translationKey => $translationValue) {
                         $keyExists =
@@ -93,11 +96,23 @@ class TranslationsFactory implements TranslationsFactoryInterface
                             array_key_exists($translationKey, $databaseCatalogue[$databaseDomain])
                         ;
 
+                        $fallbackOnDefaultValue = $translationKey != $translationValue ||
+                            $locale === str_replace('_', '-', self::DEFAULT_LOCALE);
+                        ;
                         $translations[$domain][$translationKey] = array(
-                            'xlf' => $translations[$domain][$translationKey],
+                            'xlf' =>  $fallbackOnDefaultValue ? $translations[$domain][$translationKey] : '',
                             'db' => $keyExists ? $databaseCatalogue[$databaseDomain][$translationKey] : '',
                         );
+
+                        if (
+                            empty($translations[$domain][$translationKey]['xlf']) &&
+                            empty($translations[$domain][$translationKey]['db'])
+                        ) {
+                            $missingTranslations++;
+                        }
                     }
+
+                    $translations[$domain]['__metadata'] = array('missing_translations' => $missingTranslations);
                 }
 
                 ksort($translations);
@@ -106,18 +121,30 @@ class TranslationsFactory implements TranslationsFactoryInterface
             }
         }
 
-        // throw an exception
+        throw new ProviderNotFoundException($domainIdentifier);
     }
 
-    private function getTranslationsWithSources(ProviderInterface $provider, MessageCatalogue $catalogue)
+    /**
+     * @param AbstractProvider $provider
+     * @param MessageCatalogueInterface $catalogue
+     * @return MessageCatalogueInterface
+     */
+    private function addDefaultTranslations(AbstractProvider $provider, MessageCatalogueInterface $catalogue)
     {
-        $defaultCatalogue = $provider->getDefaultCatalogue();
-        $defaultCatalogue->addCatalogue($catalogue);
+        if (!$provider instanceof UseDefaultCatalogueInterface) {
+            return $catalogue;
+        }
 
-        return $defaultCatalogue;
+        $catalogueWithDefault = $provider->getDefaultCatalogue();
+        $catalogueWithDefault->addCatalogue($catalogue);
+
+        return $catalogueWithDefault;
     }
 
-    public function addProvider(ProviderInterface $provider)
+    /**
+     * @param AbstractProvider $provider
+     */
+    public function addProvider(AbstractProvider $provider)
     {
         $this->providers[] = $provider;
     }

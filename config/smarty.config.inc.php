@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -59,8 +59,32 @@ if (defined('_PS_ADMIN_DIR_')) {
     require_once dirname(__FILE__).'/smartyfront.config.inc.php';
 }
 
-require_once _PS_SMARTY_DIR_ .'plugins/modifier.truncate.php';
+require_once _PS_SMARTY_DIR_.'plugins/modifier.truncate.php';
 
+// This escape modifier is required for invoice PDF generation
+function smartyEscape($string, $esc_type = 'html', $char_set = null, $double_encode = true)
+{
+    $escapeModifierFile = implode(
+        DIRECTORY_SEPARATOR,
+        array(
+            _PS_VENDOR_DIR_,
+            'prestashop',
+            'smarty',
+            'plugins',
+            'modifier.escape.php',
+        )
+    );
+    require_once $escapeModifierFile;
+
+    global $smarty;
+    if (($esc_type === 'html' || $esc_type === 'htmlall') && $smarty->escape_html) {
+        return $string;
+    } else {
+        return smarty_modifier_escape($string, $esc_type, $char_set, $double_encode);
+    }
+}
+
+smartyRegisterFunction($smarty, 'modifier', 'escape', 'smartyEscape');
 smartyRegisterFunction($smarty, 'modifier', 'truncate', 'smarty_modifier_truncate');
 smartyRegisterFunction($smarty, 'function', 'dump', 'smartyDump'); // Debug only
 smartyRegisterFunction($smarty, 'function', 'l', 'smartyTranslate', false);
@@ -79,32 +103,9 @@ function smartyDump($params, &$smarty)
     return Tools::dump($params['var']);
 }
 
-
-
 function smarty_modifier_htmlentitiesUTF8($string)
 {
     return Tools::htmlentitiesUTF8($string);
-}
-function smartyMinifyHTML($tpl_output, &$smarty)
-{
-    $context = Context::getContext();
-    if (isset($context->controller) && in_array($context->controller->php_self, array('pdf-invoice', 'pdf-order-return', 'pdf-order-slip'))) {
-        return $tpl_output;
-    }
-    $tpl_output = Media::minifyHTML($tpl_output);
-
-    return $tpl_output;
-}
-
-function smartyPackJSinHTML($tpl_output, &$smarty)
-{
-    $context = Context::getContext();
-    if (isset($context->controller) && in_array($context->controller->php_self, array('pdf-invoice', 'pdf-order-return', 'pdf-order-slip'))) {
-        return $tpl_output;
-    }
-    $tpl_output = Media::packJSinHTML($tpl_output);
-
-    return $tpl_output;
 }
 
 function smartyRegisterFunction($smarty, $type, $function, $params, $lazy = true)
@@ -116,6 +117,9 @@ function smartyRegisterFunction($smarty, $type, $function, $params, $lazy = true
     // lazy is better if the function is not called on every page
     if ($lazy) {
         $lazy_register = SmartyLazyRegister::getInstance();
+        if ($lazy_register->isRegistered($params)) {
+            return;
+        }
         $lazy_register->register($params);
 
         if (is_array($params)) {

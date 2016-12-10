@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -40,7 +40,6 @@ class AdminCustomersControllerCore extends AdminController
     {
         $this->bootstrap = true;
         $this->required_database = true;
-        $this->required_fields = array('optin');
         $this->table = 'customer';
         $this->className = 'Customer';
         $this->lang = false;
@@ -50,6 +49,13 @@ class AdminCustomersControllerCore extends AdminController
         $this->allow_export = true;
 
         parent::__construct();
+
+        $this->required_fields = array(
+            array(
+                'name' => 'optin',
+                'label' => $this->trans('Partner offers', array(), 'Admin.OrdersCustomers.Feature')
+            ),
+        );
 
         $this->addRowAction('edit');
         $this->addRowAction('view');
@@ -126,16 +132,12 @@ class AdminCustomersControllerCore extends AdminController
             'newsletter' => array(
                 'title' => $this->trans('Newsletter', array(), 'Admin.Global'),
                 'align' => 'text-center',
-                'type' => 'bool',
                 'callback' => 'printNewsIcon',
-                'orderby' => false
             ),
             'optin' => array(
                 'title' => $this->trans('Partner offers', array(), 'Admin.OrdersCustomers.Feature'),
                 'align' => 'text-center',
-                'type' => 'bool',
                 'callback' => 'printOptinIcon',
-                'orderby' => false
             ),
             'date_add' => array(
                 'title' => $this->trans('Registration', array(), 'Admin.OrdersCustomers.Feature'),

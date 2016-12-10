@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,19 +18,29 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author 	PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2015 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShop\PrestaShop\Adapter\Attribute;
+
+use Context;
 
 /**
  * Admin controller wrapper for new Architecture, about Category admin controller.
  */
 class AdminAttributeGeneratorControllerWrapper
 {
+    private $translator;
+
+    public function __construct()
+    {
+        $context = Context::getContext();
+        $this->translator = $context->getTranslator();
+    }
+
     /**
      * Generate product attributes
      *
@@ -74,7 +84,7 @@ class AdminAttributeGeneratorControllerWrapper
             if (($depends_on_stock = \StockAvailableCore::dependsOnStock($idProduct)) && \StockAvailableCore::getQuantityAvailableByProduct($idProduct, $idAttribute)) {
                 return array(
                     'status' => 'error',
-                    'message'=> 'It is not possible to delete a combination while it still has some quantities in the Advanced Stock Management. You must delete its stock first.'
+                    'message'=> $this->translator->trans('It is not possible to delete a combination while it still has some quantities in the Advanced Stock Management. You must delete its stock first.', array(), 'Admin.Catalog.Notification'),
                 );
             } else {
                 $product->deleteAttributeCombination((int)$idAttribute);
@@ -90,19 +100,19 @@ class AdminAttributeGeneratorControllerWrapper
                 if ($depends_on_stock && !\StockCore::deleteStockByIds($idProduct, $idAttribute)) {
                     return array(
                         'status' => 'error',
-                        'message'=> 'Error while deleting the stock'
+                        'message'=> $this->translator->trans('Error while deleting the stock', array(), 'Admin.Catalog.Notification'),
                     );
                 } else {
                     return array(
                         'status' => 'ok',
-                        'message'=> 'Successful deletion'
+                        'message'=> $this->translator->trans('Successful deletion', array(), 'Admin.Catalog.Notification'),
                     );
                 }
             }
         } else {
             return array(
                 'status' => 'error',
-                'message'=> 'You cannot delete this attribute.'
+                'message'=> $this->translator->trans('You cannot delete this attribute.', array(), 'Admin.Catalog.Notification'),
             );
         }
     }

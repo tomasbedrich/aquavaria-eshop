@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -40,10 +40,9 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
             return;
         }
 
-        $this->initTabModuleList();
         $this->addToolBarModulesListButton();
         $this->toolbar_title = $this->trans('Stats', array(), 'Admin.Stats.Feature');
-        $this->initPageHeaderToolbar();
+
         if ($this->display == 'view') {
             // Some controllers use the view action without an object
             if ($this->className) {
@@ -56,13 +55,8 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
         $this->content .= $this->displayCalendar();
         $this->content .= $this->displayStats();
 
-
         $this->context->smarty->assign(array(
             'content' => $this->content,
-            'url_post' => self::$currentIndex.'&token='.$this->token,
-            'show_page_header_toolbar' => $this->show_page_header_toolbar,
-            'page_header_toolbar_title' => $this->page_header_toolbar_title,
-            'page_header_toolbar_btn' => $this->page_header_toolbar_btn
         ));
     }
 

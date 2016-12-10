@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -88,7 +88,7 @@ class AdminAttachmentsControllerCore extends AdminController
         parent::setMedia();
 
         $this->addJs(_PS_JS_DIR_.'/admin/attachments.js');
-        Media::addJsDefL('confirm_text', $this->trans('This attachment is associated with the following products, do you really want to  delete it?', array(), 'Admin.Catalog.Notification'));
+        Media::addJsDefL('confirm_text', $this->trans('This file is associated with the following products, do you really want to  delete it?', array(), 'Admin.Catalog.Notification'));
     }
 
     public static function displayHumanReadableSize($size)
@@ -101,7 +101,7 @@ class AdminAttachmentsControllerCore extends AdminController
         if (empty($this->display)) {
             $this->page_header_toolbar_btn['new_attachment'] = array(
                 'href' => self::$currentIndex.'&addattachment&token='.$this->token,
-                'desc' => $this->trans('Add new attachment', array(), 'Admin.Catalog.Feature'),
+                'desc' => $this->trans('Add new file', array(), 'Admin.Catalog.Feature'),
                 'icon' => 'process-icon-new'
             );
         }
@@ -131,7 +131,7 @@ class AdminAttachmentsControllerCore extends AdminController
 
         $this->fields_form = array(
             'legend' => array(
-                'title' => $this->trans('Attachment', array(), 'Admin.Catalog.Feature'),
+                'title' => $this->trans('Add new file', array(), 'Admin.Catalog.Feature'),
                 'icon' => 'icon-paper-clip'
             ),
             'input' => array(

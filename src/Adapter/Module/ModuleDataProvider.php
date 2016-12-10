@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,10 +18,10 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author 	PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2015 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 namespace PrestaShop\PrestaShop\Adapter\Module;
 
@@ -71,25 +71,26 @@ class ModuleDataProvider
             $result['installed'] = 1;
             $result['active'] = $this->isEnabled($name);
             $result['active_on_mobile'] = (bool)($this->getDeviceStatus($name) & AddonListFilterDeviceStatus::DEVICE_MOBILE);
+            $lastAccessDate = '0000-00-00 00:00:00';
 
             if (!is_null($this->entityManager)) {
                 $moduleID = (int)$result['id'];
                 $legacyContext = new LegacyContext();
                 $legacyContext = $legacyContext->getContext();
                 $employeeID = (int)$legacyContext->employee->id;
-                $moduleHistory = $this->entityManager->getRepository('PrestaShopBundle:ModuleHistory')
-                    ->findOneBy([
-                        'idEmployee' => $employeeID,
-                        'idModule'   => $moduleID
-                    ]);
+                
+                $qb = $this->entityManager->createQueryBuilder();
+                $qb->select('mh')
+                    ->from('PrestaShopBundle:ModuleHistory', 'mh', 'mh.idModule')
+                    ->where('mh.idEmployee = ?1')
+                    ->setParameter(1, $employeeID);
+                $query = $qb->getQuery();
+                $query->useResultCache(true);
+                $modulesHistory = $query->getResult();
 
-                if (is_null($moduleHistory)) {
-                    $lastAccessDate = '0000-00-00 00:00:00';
-                } else {
-                    $lastAccessDate = $moduleHistory->getDateUpd()->format('Y-m-d H:i:s');
+                if (array_key_exists($moduleID, $modulesHistory)) {
+                    $lastAccessDate = $modulesHistory[$moduleID]->getDateUpd()->format('Y-m-d H:i:s');
                 }
-            } else {
-                $lastAccessDate = '0000-00-00 00:00:00';
             }
             $result['last_access_date'] = $lastAccessDate;
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -310,19 +310,25 @@ class AdminCustomerThreadsControllerCore extends AdminController
     {
         if ($id_customer_thread = (int)Tools::getValue('id_customer_thread')) {
             if (($id_contact = (int)Tools::getValue('id_contact'))) {
-                Db::getInstance()->execute('
+                $result = Db::getInstance()->execute('
 					UPDATE '._DB_PREFIX_.'customer_thread
-					SET id_contact = '.(int)$id_contact.'
-					WHERE id_customer_thread = '.(int)$id_customer_thread
+					SET id_contact = '.$id_contact.'
+					WHERE id_customer_thread = '.$id_customer_thread
                 );
+                if ($result) {
+                    $this->object->id_contact = $id_contact;
+                }
             }
             if ($id_status = (int)Tools::getValue('setstatus')) {
                 $status_array = array(1 => 'open', 2 => 'closed', 3 => 'pending1', 4 => 'pending2');
-                Db::getInstance()->execute('
+                $result = Db::getInstance()->execute('
 					UPDATE '._DB_PREFIX_.'customer_thread
 					SET status = "'.$status_array[$id_status].'"
-					WHERE id_customer_thread = '.(int)$id_customer_thread.' LIMIT 1
+					WHERE id_customer_thread = '.$id_customer_thread.' LIMIT 1
 				');
+                if ($result) {
+                    $this->object->status = $status_array[$id_status];
+                }
             }
             if (isset($_POST['id_employee_forward'])) {
                 $messages = Db::getInstance()->getRow('
@@ -364,7 +370,12 @@ class AdminCustomerThreadsControllerCore extends AdminController
                     if (Mail::Send(
                         $this->context->language->id,
                         'forward_msg',
-                        Mail::l('Fwd: Customer message', $this->context->language->id),
+                        $this->trans(
+                            'Fwd: Customer message',
+                            array(),
+                            'Emails.Subject',
+                            $this->context->language->locale
+                        ),
                         $params,
                         $employee->email,
                         $employee->firstname.' '.$employee->lastname,
@@ -387,7 +398,12 @@ class AdminCustomerThreadsControllerCore extends AdminController
                     if (Mail::Send(
                         $this->context->language->id,
                         'forward_msg',
-                        Mail::l('Fwd: Customer message', $this->context->language->id),
+                        $this->trans(
+                            'Fwd: Customer message',
+                            array(),
+                            'Emails.Subject',
+                            $this->context->language->locale
+                        ),
                         $params, $email, null,
                         $current_employee->email, $current_employee->firstname.' '.$current_employee->lastname,
                         null, null, _PS_MAIL_DIR_, true)) {
@@ -440,10 +456,20 @@ class AdminCustomerThreadsControllerCore extends AdminController
                         $from_email = null;
                     }
 
+                    $language = new Language((int) $ct->id_lang);
+
                     if (Mail::Send(
                         (int)$ct->id_lang,
                         'reply_msg',
-                        sprintf(Mail::l('An answer to your message is available #ct%1$s #tc%2$s', $ct->id_lang), $ct->id, $ct->token),
+                        $this->trans(
+                            'An answer to your message is available #ct%thread_id% #tc%thread_token%',
+                            array(
+                                '%thread_id%' => $ct->id,
+                                '%thread_token%' => $ct->token,
+                            ),
+                            'Emails.Subject',
+                            $language->locale
+                        ),
                         $params, Tools::getValue('msg_email'), null, $from_email, $from_name, $file_attachment, null,
                         _PS_MAIL_DIR_, true, $ct->id_shop)) {
                         $ct->status = 'closed';

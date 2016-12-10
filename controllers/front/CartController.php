@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -70,14 +70,14 @@ class CartControllerCore extends FrontController
      */
     public function initContent()
     {
-        if (Configuration::isCatalogMode()) {
+        if (Configuration::isCatalogMode() && Tools::getValue('action') === 'show' ) {
             Tools::redirect('index.php');
         }
 
         parent::initContent();
 
         $presenter = new CartPresenter();
-        $presented_cart = $presenter->present($this->context->cart);
+        $presented_cart = $presenter->present($this->context->cart, $shouldSeparateGifts = true);
 
         $this->context->smarty->assign([
             'cart' => $presented_cart,
@@ -100,16 +100,23 @@ class CartControllerCore extends FrontController
             return;
         }
 
+        $productsInCart = $this->context->cart->getProducts();
+        $updatedProducts = array_filter($productsInCart, array($this, 'productInCartMatchesCriteria'));
+        list(, $updatedProduct) = each($updatedProducts);
+        $productQuantity = $updatedProduct['quantity'];
+
         if (!$this->errors) {
             $this->ajaxDie(Tools::jsonEncode([
                 'success' => true,
                 'id_product' => $this->id_product,
-                'id_product_attribute' => $this->id_product_attribute
+                'id_product_attribute' => $this->id_product_attribute,
+                'quantity' => $productQuantity,
             ]));
         } else {
             $this->ajaxDie(Tools::jsonEncode([
                 'hasError' => true,
                 'errors' => $this->errors,
+                'quantity' => $productQuantity,
             ]));
         }
     }
@@ -135,9 +142,6 @@ class CartControllerCore extends FrontController
 
     public function displayAjaxProductRefresh()
     {
-        if (Configuration::isCatalogMode()) {
-            return;
-        }
         $url = $this->context->link->getProductLink(
             $this->id_product,
             null,
@@ -162,27 +166,6 @@ class CartControllerCore extends FrontController
     public function postProcess()
     {
         $this->updateCart();
-
-        // Make redirection
-        if (!$this->errors) {
-            if ($back = Tools::getValue('back')) {
-                Tools::redirect(urldecode($back));
-            }
-
-            $queryString = Tools::safeOutput(Tools::getValue('query', null));
-            if ($queryString && !Configuration::get('PS_CART_REDIRECT')) {
-                Tools::redirect('index.php?controller=search&search='.$queryString);
-            }
-
-            // Redirect to previous page
-            if (isset($_SERVER['HTTP_REFERER'])) {
-                preg_match('!http(s?)://(.*)/(.*)!', $_SERVER['HTTP_REFERER'], $regs);
-                if (isset($regs[3]) && !Configuration::get('PS_CART_REDIRECT')) {
-                    $url = preg_replace('/(\?)+content_only=1/', '', $_SERVER['HTTP_REFERER']);
-                    Tools::redirect($url);
-                }
-            }
-        }
     }
 
     protected function updateCart()
@@ -298,10 +281,7 @@ class CartControllerCore extends FrontController
 
         if (is_array($cart_products)) {
             foreach ($cart_products as $cart_product) {
-                if ((!isset($this->id_product_attribute) ||
-                    ($cart_product['id_product_attribute'] == $this->id_product_attribute &&
-                    $cart_product['id_customization'] == $this->customization_id)) &&
-                    (isset($this->id_product) && $cart_product['id_product'] == $this->id_product)) {
+                if ($this->productInCartMatchesCriteria($cart_product)) {
                     $qty_to_check = $cart_product['cart_quantity'];
 
                     if (Tools::getValue('op', 'up') == 'down') {
@@ -318,7 +298,7 @@ class CartControllerCore extends FrontController
         // Check product quantity availability
         if ($this->id_product_attribute) {
             if (!Product::isAvailableWhenOutOfStock($product->out_of_stock) && !Attribute::checkAttributeQty($this->id_product_attribute, $qty_to_check)) {
-                $this->errors[] = $this->trans('There isn\'t enough product in stock', array(), 'Shop.Notifications.Error');
+                $this->errors[] = $this->trans('There are not enough products in stock', array(), 'Shop.Notifications.Error');
             }
         } elseif ($product->hasAttributes()) {
             $minimumQuantity = ($product->out_of_stock == 2) ? !Configuration::get('PS_ORDER_OUT_OF_STOCK') : !$product->out_of_stock;
@@ -327,10 +307,10 @@ class CartControllerCore extends FrontController
             if (!$this->id_product_attribute) {
                 Tools::redirectAdmin($this->context->link->getProductLink($product));
             } elseif (!Product::isAvailableWhenOutOfStock($product->out_of_stock) && !Attribute::checkAttributeQty($this->id_product_attribute, $qty_to_check)) {
-                $this->errors[] = $this->trans('There isn\'t enough product in stock', array(), 'Shop.Notifications.Error');
+                $this->errors[] = $this->trans('There are not enough products in stock', array(), 'Shop.Notifications.Error');
             }
         } elseif (!$product->checkQty($qty_to_check)) {
-            $this->errors[] = $this->trans('There isn\'t enough product in stock', array(), 'Shop.Notifications.Error');
+            $this->errors[] = $this->trans('There are not enough products in stock', array(), 'Shop.Notifications.Error');
         }
 
         // If no errors, process product addition
@@ -368,6 +348,20 @@ class CartControllerCore extends FrontController
 
         $removed = CartRule::autoRemoveFromCart();
         CartRule::autoAddToCart();
+    }
+
+    /**
+     * @param $productInCart
+     * @return bool
+     */
+    function productInCartMatchesCriteria($productInCart) {
+        return (
+            !isset($this->id_product_attribute) ||
+            (
+                $productInCart['id_product_attribute'] == $this->id_product_attribute &&
+                $productInCart['id_customization'] == $this->customization_id
+            )
+        ) && isset($this->id_product) && $productInCart['id_product'] == $this->id_product;
     }
 
     public function getTemplateVarPage()

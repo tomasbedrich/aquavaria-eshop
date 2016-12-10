@@ -1,4 +1,29 @@
 <?php
+/**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
+
 
 namespace PrestaShop\PrestaShop\Core\Product;
 
@@ -33,11 +58,30 @@ class ProductPresenter
         $this->translator = $translator;
     }
 
+    /**
+     * Prices should be shown for products with active "Show price" option
+     * and customer groups with active "Show price" option.
+     *
+     * @param ProductPresentationSettings $settings
+     * @param array $product
+     * @return bool
+     */
     private function shouldShowPrice(
         ProductPresentationSettings $settings,
         array $product
     ) {
-        return  $settings->showPrices && $product['available_for_order'];
+        return $settings->showPrices && (bool) $product['show_price'];
+    }
+
+    /**
+     * The "Add to cart" button should be shown for products available for order.
+     *
+     * @param $product
+     * @return mixed
+     */
+    private function shouldShowAddToCartButton($product)
+    {
+        return (bool) $product['available_for_order'];
     }
 
     private function fillImages(
@@ -160,30 +204,30 @@ class ProductPresenter
         return $presentedProduct;
     }
 
-    private function shouldEnableAddToCartButton(
-        ProductPresentationSettings $settings,
-        array $product
-    ) {
-        $can_add_to_cart = $this->shouldShowPrice($settings, $product);
-
+    protected function shouldEnableAddToCartButton(array $product)
+    {
         if (($product['customizable'] == 2 || !empty($product['customization_required']))) {
-            $can_add_to_cart = false;
+            $shouldShowButton = false;
 
             if (isset($product['customizations'])) {
-                $can_add_to_cart = true;
+                $shouldShowButton = true;
                 foreach ($product['customizations']['fields'] as $field) {
                     if ($field['required'] && !$field['is_customized']) {
-                        $can_add_to_cart = false;
+                        $shouldShowButton = false;
                     }
                 }
             }
+        } else {
+            $shouldShowButton = true;
         }
+
+        $shouldShowButton = $shouldShowButton && $this->shouldShowAddToCartButton($product);
 
         if ($product['quantity'] <= 0 && !$product['allow_oosp']) {
-            $can_add_to_cart = false;
+            $shouldShowButton = false;
         }
 
-        return $can_add_to_cart;
+        return $shouldShowButton;
     }
 
     private function getAddToCartURL(array $product)
@@ -199,11 +243,15 @@ class ProductPresenter
         Language $language,
         $canonical = false
     ) {
+        $linkRewrite = isset($product['link_rewrite'])?$product['link_rewrite']:null;
+        $category = isset($product['category'])?$product['category']:null;
+        $ean13 = isset($product['ean13'])?$product['ean13']:null;
+
         return $this->link->getProductLink(
             $product['id_product'],
-            null,
-            null,
-            null,
+            $linkRewrite,
+            $category,
+            $ean13,
             $language->id,
             null,
             (!$canonical) ? $product['id_product_attribute'] : null,
@@ -352,20 +400,21 @@ class ProductPresenter
 
         if ($show_availability) {
             if ($product['quantity'] > 0) {
-                $presentedProduct['availability_message'] = $product['available_now'];
-                $presentedProduct['availability'] = 'available';
-                $presentedProduct['availability_date'] = null;
+                $presentedProduct['availability_date'] = $product['available_date'];
+                if ($product['quantity'] < $settings->lastRemainingItems) {
+                    $presentedProduct = $this->applyLastItemsInStockDisplayRule($product, $settings, $presentedProduct);
+                } else {
+                    $presentedProduct['availability_message'] = $product['available_now'];
+                    $presentedProduct['availability'] = 'available';
+                }
             } elseif ($product['allow_oosp']) {
                 if ($product['available_later']) {
                     $presentedProduct['availability_message'] = $product['available_later'];
                     $presentedProduct['availability_date'] = $product['available_date'];
                     $presentedProduct['availability'] = 'available';
                 } else {
-                    $presentedProduct['availability_message'] = $this->translator->trans(
-                        'Out of stock',
-                        array(),
-                        'Shop.Theme.Catalog'
-                    );
+                    // no default message when allow_oosp (out of stock) is enabled & available_later is empty
+                    $presentedProduct['availability_message'] = null;
                     $presentedProduct['availability_date'] = $product['available_date'];
                     $presentedProduct['availability'] = 'unavailable';
                 }
@@ -390,6 +439,84 @@ class ProductPresenter
             $presentedProduct['availability_message'] = null;
             $presentedProduct['availability_date'] = null;
             $presentedProduct['availability'] = null;
+        }
+
+        return $presentedProduct;
+    }
+
+    /**
+     * Override availability message when quantity of products in stock is less than what has been defined
+     * in Shop Parameters > Product Settings
+     *
+     * @param array $product
+     * @param ProductPresentationSettings $settings
+     * @param array $presentedProduct
+     * @return array
+     */
+    protected function applyLastItemsInStockDisplayRule(
+        array $product,
+        ProductPresentationSettings $settings,
+        array $presentedProduct
+    ) {
+        $presentedProduct['availability_message'] = $this->translator->trans(
+            'Last items in stock',
+            array(),
+            'Shop.Theme.Catalog'
+        );
+        $presentedProduct['availability'] = 'last_remaining_items';
+
+        return $presentedProduct;
+    }
+
+    /**
+     * Add new attribute reference_to_display if the product reference or the selected combinations reference is set
+     * @param array $product
+     * @param array $presentedProduct
+     * @return array
+     */
+    public function addReferenceToDisplay(array $product, array $presentedProduct)
+    {
+        foreach ($product['attributes'] as $attribute) {
+            if (isset($attribute['reference']) && $attribute['reference'] != null) {
+                $presentedProduct['reference_to_display'] = $attribute['reference'];
+            } else {
+                $presentedProduct['reference_to_display'] = $product['reference'];
+            }
+        }
+
+        return $presentedProduct;
+    }
+
+    /**
+     * Add all specific references to product
+     * @param array $product
+     * @param array $presentedProduct
+     * @return array
+     */
+    public function addAttributesSpecificReferences(array $product, array $presentedProduct)
+    {
+        $presentedProduct['specific_references'] = array_slice($product['attributes'], 0)[0];
+        //this attributes should not be displayed in FO
+        unset(
+            $presentedProduct['specific_references']['id_attribute'],
+            $presentedProduct['specific_references']['id_attribute_group'],
+            $presentedProduct['specific_references']['name'],
+            $presentedProduct['specific_references']['group'],
+            $presentedProduct['specific_references']['reference']
+        );
+
+        //if the attribute's references doesn't exist then get the product's references or unset it
+        foreach ($presentedProduct['specific_references'] as $key => $value) {
+            if (empty($value)) {
+                $translatedKey = $this->getTranslatedKey($key);
+                unset($presentedProduct['specific_references'][$key]);
+                if (!empty($product[$key])) {
+                    $presentedProduct['specific_references'][$translatedKey] = $product[$key];
+                }
+            }
+        }
+        if (empty($presentedProduct['specific_references'])) {
+            unset($presentedProduct['specific_references']);
         }
 
         return $presentedProduct;
@@ -430,7 +557,7 @@ class ProductPresenter
             $language
         );
 
-        if ($this->shouldEnableAddToCartButton($settings, $product)) {
+        if ($this->shouldEnableAddToCartButton($product)) {
             $presentedProduct['add_to_cart_url'] = $this->getAddToCartURL($product);
         } else {
             $presentedProduct['add_to_cart_url'] = null;
@@ -484,6 +611,169 @@ class ProductPresenter
             $product
         );
 
+        // If product has attributes and it's no added to card
+        if (isset($product['attributes']) && !isset($product['cart_quantity'])) {
+            $presentedProduct = $this->addReferenceToDisplay(
+                $product,
+                $presentedProduct
+            );
+
+            $presentedProduct = $this->addAttributesSpecificReferences(
+                $product,
+                $presentedProduct
+            );
+        }
+
+        $presentedProduct['embedded_attributes'] = $this->getProductEmbeddedAttributes($product);
+
         return $presentedProduct;
+    }
+
+    private function getTranslatedKey($key)
+    {
+        switch ($key) {
+            case 'ean13':
+                return $this->translator->trans('ean13', array(), 'Shop.Theme.Catalog');
+            case 'isbn':
+                return $this->translator->trans('isbn', array(), 'Shop.Theme.Catalog');
+            case 'upc':
+                return $this->translator->trans('upc', array(), 'Shop.Theme.Catalog');
+        }
+
+        return $key;
+    }
+
+    /**
+     * @return array
+     */
+    protected function getProductAttributeWhitelist()
+    {
+        return array(
+            'id_shop_default',
+            'id_manufacturer',
+            'id_supplier',
+            'reference',
+            'is_virtual',
+            'id_category_default',
+            'id_product_attribute',
+            'id_product',
+            'id_customization',
+            'price',
+            'pack_stock_type',
+            'meta_description',
+            'meta_keywords',
+            'meta_title',
+            'link_rewrite',
+            'name',
+            'description',
+            'description_short',
+            "on_sale",
+            "online_only",
+            "ecotax",
+            "minimal_quantity",
+            "price",
+            "unity",
+            "unit_price_ratio",
+            "additional_shipping_cost",
+            "customizable",
+            "text_fields",
+            "uploadable_files",
+            "redirect_type",
+            "id_product_redirected",
+            "available_for_order",
+            "available_date",
+            "show_condition",
+            "condition",
+            "show_price",
+            "indexed",
+            "visibility",
+            "cache_default_attribute",
+            "advanced_stock_management",
+            "date_add",
+            "date_upd",
+            "pack_stock_type",
+            "meta_description",
+            "meta_keywords",
+            "meta_title",
+            "link_rewrite",
+            "name",
+            "description",
+            "description_short",
+            "available_now",
+            "available_later",
+            "id",
+            "out_of_stock",
+            "new",
+            "quantity_wanted",
+            "extraContent",
+            "allow_oosp",
+            "category",
+            "category_name",
+            "link",
+            "attribute_price",
+            "price_tax_exc",
+            "price_without_reduction",
+            "reduction",
+            "specific_prices",
+            "quantity",
+            "quantity_all_versions",
+            "id_image",
+            "features",
+            "attachments",
+            "virtual",
+            "pack",
+            "packItems",
+            "nopackprice",
+            "customization_required",
+            "attributes",
+            "rate",
+            "tax_name",
+            "ecotax_rate",
+            "unit_price",
+            "customizations",
+            "is_customizable",
+            "show_quantities",
+            "quantity_label",
+            "quantity_discounts",
+            "customer_group_discount",
+            "weight_unit",
+            "images",
+            "cover",
+            "url",
+            "canonical_url",
+            "has_discount",
+            "discount_type",
+            "discount_percentage",
+            "discount_percentage_absolute",
+            "discount_amount",
+            "price_amount",
+            "unit_price_full",
+            "add_to_cart_url",
+            "main_variants",
+            "flags",
+            "labels",
+            "show_availability",
+            "availability_date",
+            "availability_message",
+            "availability",
+            "reference_to_display",
+        );
+    }
+
+    /**
+     * @param array $product
+     * @return string
+     */
+    protected function getProductEmbeddedAttributes(array $product)
+    {
+        $whitelist = $this->getProductAttributeWhitelist();
+        $embeddedProductAttributes = array();
+        foreach ($product as $attribute => $value) {
+            if (in_array($attribute, $whitelist)) {
+                $embeddedProductAttributes[$attribute] = $value;
+            }
+        }
+
+        return $embeddedProductAttributes;
     }
 }

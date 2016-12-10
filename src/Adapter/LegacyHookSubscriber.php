@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,10 +18,10 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author 	PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2015 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 namespace PrestaShop\PrestaShop\Adapter;
 
@@ -230,26 +230,29 @@ class LegacyHookSubscriber implements EventSubscriberInterface
         }
 
         $hooks = \HookCore::getHooks();
-        foreach ($hooks as $hook) {
-            $name = $hook['name'];
-            $id = $hook['id_hook'];
+        
+        if (is_array($hooks)) {
+            foreach ($hooks as $hook) {
+                $name = $hook['name'];
+                $id = $hook['id_hook'];
 
-            $moduleListeners = array();
-            $modules = array();
-            //SF2 cache clear bug fix : call bqSQL alias function
-            if (function_exists("bqSQL")) {
-                $modules = \HookCore::getHookModuleExecList($name);
-            }
-            
-            if (is_array($modules)) {
-                foreach ($modules as $order => $module) {
-                    $moduleId = $module['id_module'];
-                    $functionName = 'call_'.$id.'_'.$moduleId;
-                    $moduleListeners[] = array($functionName, 2000-$order);
+                $moduleListeners = array();
+                $modules = array();
+                //SF2 cache clear bug fix : call bqSQL alias function
+                if (function_exists("bqSQL")) {
+                    $modules = \HookCore::getHookModuleExecList($name);
                 }
-    
-                if (count($moduleListeners)) {
-                    $listeners[$name] = $moduleListeners;
+
+                if (is_array($modules)) {
+                    foreach ($modules as $order => $module) {
+                        $moduleId = $module['id_module'];
+                        $functionName = 'call_' . $id . '_' . $moduleId;
+                        $moduleListeners[] = array($functionName, 2000 - $order);
+                    }
+
+                    if (count($moduleListeners)) {
+                        $listeners[$name] = $moduleListeners;
+                    }
                 }
             }
         }

@@ -1,3 +1,27 @@
+/**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
 import $ from 'jquery';
 import Bloodhound from 'typeahead.js';
 
@@ -8,13 +32,16 @@ export default function() {
         let autocompleteFormId = autocompleteObject.attr('data-formid');
         let formId = `#${autocompleteFormId}-data .delete`;
         let autocompleteSource = `${autocompleteFormId}_source`;
-        
+
         $(document).on('click', formId, (e) => {
           e.preventDefault();
 
           window.modalConfirmation.create(window.translate_javascripts['Are you sure to delete this?'], null, {
             onContinue: () => {
-              $(e.target).parent().remove();
+              $(e.target).parents('.media').remove();
+
+              // Save current product after its related product has been removed
+              $('#submit').click();
             }
           }).show();
         });
@@ -72,9 +99,13 @@ export default function() {
           let tplcollection = $('#tplcollection-' + autocompleteFormId);
           let tplcollectionHtml = tplcollection.html().replace('%s', suggestion[autocompleteObject.attr('data-mappingname')]);
 
-          var html = `<li class="card">
-                      <img class="image" src="${suggestion.image}" />
+          var html = `<li class="media">
+                      <div class="media-left">
+                      <img class="media-object image" src="${suggestion.image}" />
+                      </div>
+                      <div class="media-body media-middle">
                       ${tplcollectionHtml}
+                      </div>
                       <input type="hidden" name="${autocompleteObject.attr('data-fullname')}[data][]" value="${value}" />
                       </li>`;
 

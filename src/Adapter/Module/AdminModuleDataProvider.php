@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,15 +18,15 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author     PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2015 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 namespace PrestaShop\PrestaShop\Adapter\Module;
 
-use PrestaShop\PrestaShop\Adapter\Addons\AddonsDataProvider;
 use PrestaShop\PrestaShop\Core\Addon\AddonListFilterOrigin;
+use PrestaShopBundle\Service\DataProvider\Admin\AddonsInterface;
 use PrestaShopBundle\Service\DataProvider\Admin\CategoriesProvider;
 use PrestaShopBundle\Service\DataProvider\Admin\ModuleInterface;
 use Symfony\Component\Config\ConfigCacheFactory;
@@ -56,7 +56,7 @@ class AdminModuleDataProvider implements ModuleInterface
     public function __construct(
         $languageISO,
         Router $router = null,
-        AddonsDataProvider $addonsDataProvider,
+        AddonsInterface $addonsDataProvider,
         CategoriesProvider $categoriesProvider
     ) {
         $this->languageISO = $languageISO;
@@ -109,8 +109,6 @@ class AdminModuleDataProvider implements ModuleInterface
                 'module_name' => $addon->attributes->get('name'),
             ));
 
-            // Which button should be displayed first ?
-            $url_active = '';
             if ($addon->database->has('installed') && $addon->database->get('installed') == 1) {
                 if ($addon->database->get('active') == 0) {
                     $url_active = 'enable';
@@ -122,16 +120,26 @@ class AdminModuleDataProvider implements ModuleInterface
                     $url_active = 'configure';
                     unset(
                         $urls['enable'],
-                        $urls['install'],
-                        $urls['upgrade']
+                        $urls['install']
                     );
                 } else {
                     $url_active = 'disable';
                     unset(
-                        $urls['upgrade'],
                         $urls['install'],
                         $urls['enable'],
                         $urls['configure']
+                    );
+                }
+
+                if ($addon->attributes->get('is_configurable') == 0) {
+                    unset($urls['configure']);
+                }
+
+                if ($addon->canBeUpgraded()) {
+                    $url_active = 'upgrade';
+                } else {
+                    unset(
+                        $urls['upgrade']
                     );
                 }
                 if ($addon->database->get('active_on_mobile') == 0) {
@@ -139,13 +147,16 @@ class AdminModuleDataProvider implements ModuleInterface
                 } else {
                     unset($urls['enable_mobile']);
                 }
-                if ($addon->database->get('installed') == 0 || version_compare($addon->database->get('version'), $addon->disk->get('version'), '<=')
-                    && version_compare($addon->attributes->get('version'), $addon->database->get('version'), '<=')) {
+                if (!$addon->canBeUpgraded()) {
                     unset(
                         $urls['upgrade']
                     );
                 }
-            } elseif (!$addon->attributes->has('origin') || $addon->disk->get('is_present') == true || in_array($addon->attributes->get('origin'), array('native', 'native_all', 'partner', 'customer'))) {
+            } elseif (
+                !$addon->attributes->has('origin') ||
+                $addon->disk->get('is_present') == true ||
+                in_array($addon->attributes->get('origin'), array('native', 'native_all', 'partner', 'customer'))
+            ) {
                 $url_active = 'install';
                 unset(
                     $urls['uninstall'],
@@ -170,6 +181,11 @@ class AdminModuleDataProvider implements ModuleInterface
         }
 
         return $addons;
+    }
+
+    public function getModuleAttributesById($moduleId)
+    {
+        return (array) $this->addonsDataProvider->request('module', array('id_module' => $moduleId));
     }
 
     protected function applyModuleFilters(array $modules, array $filters)

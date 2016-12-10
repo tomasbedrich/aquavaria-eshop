@@ -1,48 +1,96 @@
-{*
-* 2007-2015 PrestaShop
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Academic Free License (AFL 3.0)
-* that is bundled with this package in the file LICENSE.txt.
-* It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/afl-3.0.php
-* If you did not receive a copy of the license and are unable to
-* obtain it through the world-wide-web, please send an email
-* to license@prestashop.com so we can send you a copy immediately.
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-* versions in the future. If you wish to customize PrestaShop for your
-* needs please refer to http://www.prestashop.com for more information.
-*
-* @author    PrestaShop SA <contact@prestashop.com>
-* @copyright 2007-2015 PrestaShop SA
-* @license   http://opensource.org/licenses/afl-3.0.php Academic Free License (AFL 3.0)
-* International Registered Trademark & Property of PrestaShop SA
-*}
+{**
+ * 2007-2016 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ *}
 {extends file="helpers/view/view.tpl"}
 {block name="override_tpl"}
 	<script type="text/javascript">
 		function chooseTypeTranslation(id_lang)
 		{
 			getE('translation_lang').value = id_lang;
-			document.getElementById('typeTranslationForm').submit();
+
+      var formTranslation = $('form#typeTranslationForm');
+      var typeOption = $('#type option:selected');
+
+      if ('mails' == $('#type option:selected').val()) {
+        typeOption = $('#ps_email_selector select[name="selected-emails"] option:selected');
+      }
+
+      if ('legacy' === typeOption.data('controller')) {
+        formTranslation.attr('action', formTranslation.data('legacyaction'));
+      } else {
+        formTranslation.attr('action', formTranslation.data('sfaction'));
+      }
+
+      formTranslation.submit();
 		}
 
 		$(document).ready(function() {
       var themeSelector = $('#ps_theme_selector');
+      var themeCoreOption = themeSelector.find('select[name="selected-theme"] option#core-option');
+      var emailSelector = $('#ps_email_selector');
+      var allSelectors = $('select[name="selected-emails"], select[name="selected-theme"], select[name="locale"]');
 
       themeSelector.hide();
+      emailSelector.hide();
 
-      $('#type').on('change', function (event) {
-        var selectedValue = $(this).val();
+      $('#type').on('change', function () {
 
-        themeSelector.toggle('themes' === selectedValue);
+        // reset all select
+        allSelectors.each(function () {
+          $(this).prop('selectedIndex',0);
+        });
+
+        if ('mails' === $(this).val()) {
+          emailSelector.show();
+        } else {
+          emailSelector.hide();
+        }
+
+        if ('themes' === $(this).val()) {
+          themeSelector.find('select[name="selected-theme"]').prop('selectedIndex',1);
+          themeCoreOption.hide().attr('disabled', true);
+        } else {
+          themeCoreOption.show().attr('disabled', false);
+        }
+
+        if (1 === $('#type option:selected').data('choicetheme')) {
+          themeSelector.show();
+        } else {
+          themeSelector.hide();
+        }
       });
 
-			$('#modify-translations').click(function(e) {
+      $('select[name="selected-emails"]').on('change', function() {
+        if ('subject' === $(this).val()) {
+          themeSelector.hide();
+        } else {
+          themeSelector.show();
+        }
+      });
+
+
+			$('#modify-translations').click(function() {
 				var languages = $('#translations-languages option');
 				var i;
 				var selectedLanguage;
@@ -65,7 +113,10 @@
 			});
 		});
 	</script>
-  <form method="post" action="index.php/international/translations/list" id="typeTranslationForm" class="form-horizontal">
+  <form method="post" action="{url entity=sf route=admin_international_translations_list }"
+        data-sfaction="{url entity=sf route=admin_international_translations_list }"
+        data-legacyaction="#"
+        id="typeTranslationForm" class="form-horizontal">
     <div class="panel">
       <h3>
         <i class="icon-file-text"></i>
@@ -82,8 +133,17 @@
         <div class="col-lg-4">
           <select name="type" id="type">
             {foreach $translations_type as $type => $array}
-              <option value="{$type}">{$array.name}</option>
+              {if isset($array.name)}<option value="{$type}" data-controller="{if $array.sf_controller}sf{else}legacy{/if}" data-choicetheme="{$array.choice_theme}">{$array.name}</option>{/if}
             {/foreach}
+          </select>
+        </div>
+      </div>
+      <div class="form-group" id="ps_email_selector">
+        <label class="control-label col-lg-3" for="selected-emails">{l s='Select the type of email content'}</label>
+        <div class="col-lg-4">
+          <select name="selected-emails">
+            <option value="subject" data-controller="sf">{l s='Subject'}</option>
+            <option value="body" data-controller="legacy">{l s='Body'}</option>
           </select>
         </div>
       </div>
@@ -91,7 +151,7 @@
         <label class="control-label col-lg-3" for="selected-theme">{l s='Select your theme'}</label>
         <div class="col-lg-4">
           <select name="selected-theme">
-              <option value="">{l s='Core (no theme selected)'}</option>
+              <option id="core-option" value="">{l s='Core (no theme selected)'}</option>
             {foreach $themes as $theme}
               <option value="{$theme->getName()}" {if $current_theme_name == $theme->getName()}selected=selected{/if}>{$theme->getName()}</option>
             {/foreach}
@@ -135,13 +195,13 @@
 							<div class="col-lg-6">
 								<select id="params_import_language" name="params_import_language" class="chosen">
 								<optgroup label="{l s='Update a language'}">
-									{foreach $packs_to_update as $lang_pack}
-										<option value="{$lang_pack['iso_code']}|{$lang_pack['version']}">{$lang_pack['name']}</option>
+									{foreach from=$packs_to_update key=locale item=name}
+										<option value="{$locale}">{$name}</option>
 									{/foreach}
 								</optgroup>
 								<optgroup label="{l s='Add a language'}">
-									{foreach $packs_to_install as $lang_pack}
-										<option value="{$lang_pack['iso_code']}|{$lang_pack['version']}">{$lang_pack['name']}</option>
+									{foreach from=$packs_to_install key=locale item=name}
+										<option value="{$locale}">{$name}</option>
 									{/foreach}
 								</optgroup>
 							</select>
@@ -204,7 +264,7 @@
 			</div>
 		</div>
 	</form>
-	<form action="index.php/international/translations/extract" method="post" enctype="multipart/form-data" class="form-horizontal">
+	<form action="{url entity=sf route=admin_international_translations_export_theme }" method="post" enctype="multipart/form-data" class="form-horizontal">
 		<div class="panel">
 			<h3>
 				<i class="icon-upload"></i>

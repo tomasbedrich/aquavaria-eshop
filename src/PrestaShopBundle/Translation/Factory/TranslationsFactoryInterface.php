@@ -1,7 +1,7 @@
 <?php
 
 /**
- * 2007-2016 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -36,8 +36,8 @@ interface TranslationsFactoryInterface
     /**
      * Generates extract of global Catalogue, using domain's identifiers.
      *
-     * @param string $domainIdentifier Domain identifier
-     * @param string $locale           Locale identifier
+     * @param string $identifier Domain identifier
+     * @param string $locale     Locale identifier
      *
      * @return MessageCatalogue
      */

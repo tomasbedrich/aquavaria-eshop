@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -112,7 +112,11 @@ class OrderDetailControllerCore extends FrontController
                         Mail::Send(
                             $this->context->language->id,
                             'order_customer_comment',
-                            Mail::l('Message from a customer'),
+                            $this->trans(
+                                'Message from a customer',
+                                array(),
+                                'Emails.Subject'
+                            ),
                             array(
                                 '{lastname}' => $customer->lastname,
                                 '{firstname}' => $customer->firstname,
@@ -150,7 +154,17 @@ class OrderDetailControllerCore extends FrontController
 
         parent::initContent();
 
-        if (!($id_order = (int)Tools::getValue('id_order')) || !Validate::isUnsignedId($id_order)) {
+        $id_order = (int)Tools::getValue('id_order');
+        $id_order = $id_order && Validate::isUnsignedId($id_order) ? $id_order : false;
+
+        if (!$id_order) {
+            $reference = Tools::getValue('reference');
+            $reference = $reference && Validate::isReference($reference) ? $reference : false;
+            $order = $reference ? Order::getByReference($reference)->getFirst() : false;
+            $id_order = $order ? $order->id : false;
+        }
+
+        if (!$id_order) {
             $this->redirect_after = '404';
             $this->redirect();
         } else {
@@ -184,5 +198,18 @@ class OrderDetailControllerCore extends FrontController
         }
 
         $this->setTemplate('customer/order-detail');
+    }
+
+    public function getBreadcrumbLinks()
+    {
+        $breadcrumb = parent::getBreadcrumbLinks();
+
+        $breadcrumb['links'][] = $this->addMyAccountToBreadcrumb();
+        $breadcrumb['links'][] = array(
+            'title' => $this->trans('Order history', array(), 'Shop.Theme.CustomerAccount'),
+            'url' => $this->context->link->getPageLink('history'),
+        );
+
+        return $breadcrumb;
     }
 }

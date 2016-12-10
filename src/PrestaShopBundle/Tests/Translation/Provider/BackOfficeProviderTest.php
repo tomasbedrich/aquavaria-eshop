@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2016 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -18,10 +18,10 @@
  * versions in the future. If you wish to customize PrestaShop for your
  * needs please refer to http://www.prestashop.com for more information.
  *
- *  @author 	PrestaShop SA <contact@prestashop.com>
- *  @copyright  2007-2016 PrestaShop SA
- *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- *  International Registered Trademark & Property of PrestaShop SA
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2016 PrestaShop SA
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShopBundle\Tests\Translation\Provider;
@@ -52,10 +52,19 @@ class BackOfficeProviderTest extends \PHPUnit_Framework_TestCase
 
         // Check integrity of translations
         $this->assertArrayHasKey('AdminActions.en-US', $expectedReturn->all());
-        $translations = $expectedReturn->all('AdminActions.en-US');
+        $this->assertArrayHasKey('ModulesWirePaymentAdmin.en-US', $expectedReturn->all());
 
-        $this->assertCount(38, $translations);
-        $this->assertArrayHasKey('Download file', $translations);
-        $this->assertSame('Download file', $translations['Download file']);
+        $adminTranslations = $expectedReturn->all('AdminActions.en-US');
+        $this->assertCount(38, $adminTranslations);
+        $this->assertArrayHasKey('Download file', $adminTranslations);
+        $this->assertSame('Download file', $adminTranslations['Download file']);
+
+        $moduleTranslations = $expectedReturn->all('ModulesWirePaymentAdmin.en-US');
+        $this->assertCount(20, $moduleTranslations);
+        $this->assertArrayHasKey('No currency has been set for this module.', $moduleTranslations);
+        $this->assertSame(
+            'No currency has been set for this module.',
+            $moduleTranslations['No currency has been set for this module.']
+        );
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -93,7 +93,7 @@ class AdminAdminPreferencesControllerCore extends AdminController
                 'icon' =>    'icon-cloud-upload',
                 'fields' => array(
                     'PS_ATTACHMENT_MAXIMUM_SIZE' => array(
-                        'title' => $this->trans('Maximum size for attachment', array(), 'Admin.AdvParameters.Feature'),
+                        'title' => $this->trans('Maximum size for attached files', array(), 'Admin.AdvParameters.Feature'),
                         'hint' =>  sprintf($this->trans('Set the maximum size allowed for attachment files (in megabytes). This value has to be lower or equal to the maximum file upload allotted by your server (currently: %s MB).', array(), 'Admin.AdvParameters.Help'), $upload_mb),
                         'validation' => 'isInt',
                         'cast' => 'intval',

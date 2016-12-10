@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -159,10 +159,6 @@ define('PS_ROUND_HALF_ODD', 5);
 /* Backward compatibility */
 define('PS_ROUND_HALF', PS_ROUND_HALF_UP);
 
-/* Registration behavior */
-define('PS_REGISTRATION_PROCESS_STANDARD', 0);
-define('PS_REGISTRATION_PROCESS_AIO', 1);
-
 /* Carrier::getCarriers() filter */
 // these defines are DEPRECATED since 1.4.5 version
 define('PS_CARRIERS_ONLY', 1);
@@ -200,3 +196,5 @@ define('_PS_SMARTY_CONSOLE_OPEN_', 2);
 if (!defined('_PS_JQUERY_VERSION_')) {
     define('_PS_JQUERY_VERSION_', '1.11.0');
 }
+
+define('_PS_CACHE_CA_CERT_FILE_', _PS_CACHE_DIR_.'cacert.pem');

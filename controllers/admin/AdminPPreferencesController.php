@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -58,19 +58,6 @@ class AdminPPreferencesControllerCore extends AdminController
                         'validation' => 'isUnsignedInt',
                         'cast' => 'intval',
                         'type' => 'text'
-                    ),
-                    'PS_CART_REDIRECT' => array(
-                        'title' => $this->trans('Redirect after adding product to cart', array(), 'Admin.ShopParameters.Feature'),
-                        'hint' => $this->trans('Only for non-AJAX versions of the cart.', array(), 'Admin.ShopParameters.Help'),
-                        'cast' => 'intval',
-                        'show' => true,
-                        'required' => false,
-                        'type' => 'radio',
-                        'validation' => 'isBool',
-                        'choices' => array(
-                            0 => $this->trans('Previous page', array(), 'Admin.ShopParameters.Feature'),
-                            1 => $this->trans('Cart summary', array(), 'Admin.ShopParameters.Feature')
-                        )
                     ),
                     'PS_PRODUCT_SHORT_DESC_LIMIT' => array(
                         'title' => $this->trans('Max size of product summary', array(), 'Admin.ShopParameters.Feature'),

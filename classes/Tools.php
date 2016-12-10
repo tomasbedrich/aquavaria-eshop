@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,20 +19,35 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 
+use Symfony\Component\HttpFoundation\Request;
+
+use Composer\CaBundle\CaBundle;
+
 class ToolsCore
 {
+    const CACERT_LOCATION = 'https://curl.haxx.se/ca/cacert.pem';
+
     protected static $file_exists_cache = array();
     protected static $_forceCompile;
     protected static $_caching;
     protected static $_user_plateform;
     protected static $_user_browser;
+    protected static $request;
 
     public static $round_mode = null;
+
+
+    public function __construct(Request $request = null)
+    {
+        if ($request) {
+            self::$request = $request;
+        }
+    }
 
     /**
     * Random password generator
@@ -81,86 +96,27 @@ class ToolsCore
     /**
      * Random bytes generator
      *
-     * Thanks to Zend for entropy
+     * Limited to OpenSSL since 1.7.0.0
      *
-     * @param $length Desired length of random bytes
+     * @param int $length Desired length of random bytes
+     *
      * @return bool|string Random bytes
      */
     public static function getBytes($length)
     {
-        $length = (int)$length;
+        $length = (int) $length;
 
         if ($length <= 0) {
             return false;
         }
 
-        if (function_exists('openssl_random_pseudo_bytes')) {
-            $bytes = openssl_random_pseudo_bytes($length, $crypto_strong);
+        $bytes = openssl_random_pseudo_bytes($length, $cryptoStrong);
 
-            if ($crypto_strong === true) {
-                return $bytes;
-            }
+        if ($cryptoStrong === true) {
+            return $bytes;
         }
 
-        if (function_exists('mcrypt_create_iv')) {
-            $bytes = mcrypt_create_iv($length, MCRYPT_DEV_URANDOM);
-
-            if ($bytes !== false && strlen($bytes) === $length) {
-                return $bytes;
-            }
-        }
-
-        // Else try to get $length bytes of entropy.
-        // Thanks to Zend
-
-        $result         = '';
-        $entropy        = '';
-        $msec_per_round = 400;
-        $bits_per_round = 2;
-        $total          = $length;
-        $hash_length    = 20;
-
-        while (strlen($result) < $length) {
-            $bytes  = ($total > $hash_length) ? $hash_length : $total;
-            $total -= $bytes;
-
-            for ($i=1; $i < 3; $i++) {
-                $t1 = microtime(true);
-                $seed = mt_rand();
-
-                for ($j=1; $j < 50; $j++) {
-                    $seed = sha1($seed);
-                }
-
-                $t2 = microtime(true);
-                $entropy .= $t1 . $t2;
-            }
-
-            $div = (int) (($t2 - $t1) * 1000000);
-
-            if ($div <= 0) {
-                $div = 400;
-            }
-
-            $rounds = (int) ($msec_per_round * 50 / $div);
-            $iter = $bytes * (int) (ceil(8 / $bits_per_round));
-
-            for ($i = 0; $i < $iter; $i ++) {
-                $t1 = microtime();
-                $seed = sha1(mt_rand());
-
-                for ($j = 0; $j < $rounds; $j++) {
-                    $seed = sha1($seed);
-                }
-
-                $t2 = microtime();
-                $entropy .= $t1 . $t2;
-            }
-
-            $result .= sha1($entropy, true);
-        }
-
-        return substr($result, 0, $length);
+        return false;
     }
 
     public static function strReplaceFirst($search, $replace, $subject, $cur = 0)
@@ -456,13 +412,17 @@ class ToolsCore
             return false;
         }
 
-        $ret = (isset($_POST[$key]) ? $_POST[$key] : (isset($_GET[$key]) ? $_GET[$key] : $default_value));
-
-        if (is_string($ret)) {
-            return stripslashes(urldecode(preg_replace('/((\%5C0+)|(\%00+))/i', '', urlencode($ret))));
+        if (getenv('kernel.environment') === 'test' && self::$request instanceof Request) {
+            $value = self::$request->request->get($key, self::$request->query->get($key, $default_value));
+        } else {
+            $value = (isset($_POST[$key]) ? $_POST[$key] : (isset($_GET[$key]) ? $_GET[$key] : $default_value));
         }
 
-        return $ret;
+        if (is_string($value)) {
+            return stripslashes(urldecode(preg_replace('/((\%5C0+)|(\%00+))/i', '', urlencode($value))));
+        }
+
+        return $value;
     }
 
 
@@ -640,7 +600,7 @@ class ToolsCore
     {
         static $cldr_cache;
         if ($context) {
-            $language_code = $context->language->language_code;
+            $language_code = $context->language->locale;
         }
 
         if (!empty($cldr_cache[$language_code])) {
@@ -1084,21 +1044,57 @@ class ToolsCore
     }
 
     /**
-    * Encrypt password
-    *
-    * @param string $passwd String to encrypt
-    */
+     * Hash password
+     *
+     * @param string $passwd String to hash
+     *
+     * @return string Hashed password
+     *
+     * @deprecated 1.7.0
+     */
     public static function encrypt($passwd)
+    {
+        return self::hash($passwd);
+    }
+
+    /**
+    * Hash password
+    *
+    * @param string $passwd String to has
+     *
+     * @return string Hashed password
+     *
+     * @since 1.7.0
+     */
+    public static function hash($passwd)
     {
         return md5(_COOKIE_KEY_.$passwd);
     }
 
     /**
-    * Encrypt data string
-    *
-    * @param string $data String to encrypt
-    */
+     * Hash data string
+     *
+     * @param string $data String to encrypt
+     *
+     * @return string Hashed IV
+     *
+     * @deprecated 1.7.0
+     */
     public static function encryptIV($data)
+    {
+        return self::hashIV($data);
+    }
+
+    /**
+     * Hash data string
+     *
+     * @param string $data String to encrypt
+     *
+     * @return string Hashed IV
+     *
+     * @since 1.7.0
+     */
+    public static function hashIV($data)
     {
         return md5(_COOKIE_IV_.$data);
     }
@@ -1114,9 +1110,9 @@ class ToolsCore
             $context = Context::getContext();
         }
         if ($page === true) {
-            return (Tools::encrypt($context->customer->id.$context->customer->passwd.$_SERVER['SCRIPT_NAME']));
+            return (Tools::hash($context->customer->id.$context->customer->passwd.$_SERVER['SCRIPT_NAME']));
         } else {
-            return (Tools::encrypt($context->customer->id.$context->customer->passwd.$page));
+            return (Tools::hash($context->customer->id.$context->customer->passwd.$page));
         }
     }
 
@@ -1127,7 +1123,7 @@ class ToolsCore
     */
     public static function getAdminToken($string)
     {
-        return !empty($string) ? Tools::encrypt($string) : false;
+        return !empty($string) ? Tools::hash($string) : false;
     }
 
     public static function getAdminTokenLite($tab, Context $context = null)
@@ -1203,7 +1199,7 @@ class ToolsCore
         if ($has_mb_strtolower === null) {
             $has_mb_strtolower = function_exists('mb_strtolower');
         }
-        
+
         if (!is_string($str)) {
             return false;
         }
@@ -1852,20 +1848,70 @@ class ToolsCore
         return file_exists($filename);
     }
 
-    public static function file_get_contents($url, $use_include_path = false, $stream_context = null, $curl_timeout = 5)
+    /**
+     * refresh a local cacert file
+     *
+     * @return void
+     */
+    public static function refreshCACertFile()
     {
-        if ($stream_context == null && preg_match('/^https?:\/\//', $url)) {
-            $stream_context = @stream_context_create(array('http' => array('timeout' => $curl_timeout)));
+        if ((time() - @filemtime(_PS_CACHE_CA_CERT_FILE_) > 1296000)) {
+            $stream_context = @stream_context_create(
+              array(
+                'http' => array('timeout' => 3),
+                'ssl' => array(
+                    'cafile' => CaBundle::getBundledCaBundlePath()
+                )
+              )
+          );
+            $ca_cert_content = @file_get_contents(Tools::CACERT_LOCATION, false, $stream_context);
+
+            if (
+              preg_match('/(.*-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----){50}$/Uims', $ca_cert_content) &&
+              substr(rtrim($ca_cert_content), -1) == '-'
+          ) {
+                file_put_contents(_PS_CACHE_CA_CERT_FILE_, $ca_cert_content);
+            }
         }
-        if (in_array(ini_get('allow_url_fopen'), array('On', 'on', '1')) || !preg_match('/^https?:\/\//', $url)) {
-            return @file_get_contents($url, $use_include_path, $stream_context);
-        } elseif (function_exists('curl_init')) {
+    }
+
+    public static function file_get_contents(
+        $url,
+        $use_include_path = false,
+        $stream_context = null,
+        $curl_timeout = 5,
+        $fallback = false
+    ) {
+        if ($stream_context == null && preg_match('/^https?:\/\//', $url)) {
+            $stream_context = @stream_context_create(
+                array(
+                    'http' => array('timeout' => $curl_timeout),
+                    'ssl' => array(
+                        'verify_peer' => true,
+                        'cafile' => CaBundle::getBundledCaBundlePath()
+                    )
+                )
+            );
+        }
+
+        $is_local_file = !preg_match('/^https?:\/\//', $url);
+        if (in_array(ini_get('allow_url_fopen'), array('On', 'on', '1')) || $is_local_file) {
+            $content = @file_get_contents($url, $use_include_path, $stream_context);
+            if (!in_array($content, array('', false)) || $is_local_file || !$fallback) {
+                return $content;
+            }
+        }
+
+        if (function_exists('curl_init')) {
+            Tools::refreshCACertFile();
             $curl = curl_init();
+
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($curl, CURLOPT_URL, $url);
             curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
             curl_setopt($curl, CURLOPT_TIMEOUT, $curl_timeout);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($curl, CURLOPT_CAINFO, _PS_CACHE_CA_CERT_FILE_);
             if ($stream_context != null) {
                 $opts = stream_context_get_options($stream_context);
                 if (isset($opts['http']['method']) && Tools::strtolower($opts['http']['method']) == 'post') {
@@ -2006,15 +2052,11 @@ class ToolsCore
 
     public static function getMediaServer($filename)
     {
-        if (self::$_cache_nb_media_servers === null && defined('_MEDIA_SERVER_1_') && defined('_MEDIA_SERVER_2_') && defined('_MEDIA_SERVER_3_')) {
+        if (self::$_cache_nb_media_servers === null && defined('_MEDIA_SERVER_1_')) {
             if (_MEDIA_SERVER_1_ == '') {
                 self::$_cache_nb_media_servers = 0;
-            } elseif (_MEDIA_SERVER_2_ == '') {
-                self::$_cache_nb_media_servers = 1;
-            } elseif (_MEDIA_SERVER_3_ == '') {
-                self::$_cache_nb_media_servers = 2;
             } else {
-                self::$_cache_nb_media_servers = 3;
+                self::$_cache_nb_media_servers = 1;
             }
         }
 
@@ -2124,15 +2166,8 @@ class ToolsCore
 
         fwrite($write_fd, "RewriteEngine on\n");
 
-        if (!$medias && Configuration::getMultiShopValues('PS_MEDIA_SERVER_1')
-            && Configuration::getMultiShopValues('PS_MEDIA_SERVER_2')
-            && Configuration::getMultiShopValues('PS_MEDIA_SERVER_3')
-        ) {
-            $medias = array(
-                Configuration::getMultiShopValues('PS_MEDIA_SERVER_1'),
-                Configuration::getMultiShopValues('PS_MEDIA_SERVER_2'),
-                Configuration::getMultiShopValues('PS_MEDIA_SERVER_3')
-            );
+        if (!$medias && Configuration::getMultiShopValues('PS_MEDIA_SERVER_1')) {
+            $medias = array(Configuration::getMultiShopValues('PS_MEDIA_SERVER_1'));
         }
 
         $media_domains = '';
@@ -2326,8 +2361,11 @@ FileETag none
 
     public static function generateIndex()
     {
-        if (defined('_PS_CREATION_DATE_') && _PS_CREATION_DATE_ !== null && Configuration::get('PS_DISABLE_OVERRIDES')) {
-            PrestaShopAutoload::getInstance()->_include_override_path = false;
+        if (defined('_PS_CREATION_DATE_')) {
+            $creationDate = _PS_CREATION_DATE_;
+            if (!empty($creationDate) && Configuration::get('PS_DISABLE_OVERRIDES')) {
+                PrestaShopAutoload::getInstance()->_include_override_path = false;
+            }
         }
         PrestaShopAutoload::getInstance()->generateIndex();
     }
@@ -2853,14 +2891,18 @@ exit;
      */
     public static function getMaxUploadSize($max_size = 0)
     {
-        $post_max_size = Tools::convertBytes(ini_get('post_max_size'));
-        $upload_max_filesize = Tools::convertBytes(ini_get('upload_max_filesize'));
+        $values = array(Tools::convertBytes(ini_get('upload_max_filesize')));
+
         if ($max_size > 0) {
-            $result = min($post_max_size, $upload_max_filesize, $max_size);
-        } else {
-            $result = min($post_max_size, $upload_max_filesize);
+            $values[] = $max_size;
         }
-        return $result;
+
+        $post_max_size = Tools::convertBytes(ini_get('post_max_size'));
+        if ($post_max_size > 0) {
+            $values[] = $post_max_size;
+        }
+
+        return min($values);
     }
 
     /**
@@ -2891,6 +2933,50 @@ exit;
             }
         }
         return false;
+    }
+
+    /**
+     * Fix native uasort see: http://php.net/manual/en/function.uasort.php#114535
+     *
+     * @param $array
+     * @param $cmp_function
+     */
+    public static function uasort(&$array, $cmp_function)
+    {
+        if (count($array) < 2) {
+            return;
+        }
+        $halfway = count($array) / 2;
+        $array1 = array_slice($array, 0, $halfway, true);
+        $array2 = array_slice($array, $halfway, null, true);
+
+        self::uasort($array1, $cmp_function);
+        self::uasort($array2, $cmp_function);
+        if (call_user_func($cmp_function, end($array1), reset($array2)) < 1) {
+            $array = $array1 + $array2;
+            return;
+        }
+        $array = array();
+        reset($array1);
+        reset($array2);
+        while (current($array1) && current($array2)) {
+            if (call_user_func($cmp_function, current($array1), current($array2)) < 1) {
+                $array[key($array1)] = current($array1);
+                next($array1);
+            } else {
+                $array[key($array2)] = current($array2);
+                next($array2);
+            }
+        }
+        while (current($array1)) {
+            $array[key($array1)] = current($array1);
+            next($array1);
+        }
+        while (current($array2)) {
+            $array[key($array2)] = current($array2);
+            next($array2);
+        }
+        return;
     }
 
     /**
@@ -3532,7 +3618,7 @@ exit;
                 return $path;
             }
             $name = ($highlight != null) ? str_ireplace($highlight, '<span class="highlight">'.$highlight.'</span>', CMSCategory::hideCMSCategoryPosition($category->name)) : CMSCategory::hideCMSCategoryPosition($category->name);
-            $edit = '<a href="'.Tools::safeOutput($url_base.'&id_cms_category='.$category->id.'&addcategory&token='.Tools::getAdminToken('AdminCmsContent'.(int)Tab::getIdFromClassName('AdminCmsContent').(int)$context->employee->id)).'">
+            $edit = '<a href="'.Tools::safeOutput($url_base.'&id_cms_category='.$category->id.'&updatecms_category&token='.Tools::getAdminToken('AdminCmsContent'.(int)Tab::getIdFromClassName('AdminCmsContent').(int)$context->employee->id)).'">
 				<i class="icon-pencil"></i></a> ';
             if ($category->id == 1) {
                 $edit = '<li><a href="'.Tools::safeOutput($url_base.'&id_cms_category='.$category->id.'&viewcategory&token='.Tools::getAdminToken('AdminCmsContent'.(int)Tab::getIdFromClassName('AdminCmsContent').(int)$context->employee->id)).'">
@@ -3545,6 +3631,18 @@ exit;
             }
             return Tools::getPath($url_base, $category->id_parent, $path, '', 'cms');
         }
+    }
+
+    public static function redirectToInstall()
+    {
+        if (file_exists(dirname(__FILE__).'/../install')) {
+            header('Location: install/');
+        } elseif (file_exists(dirname(__FILE__).'/../install-dev')) {
+            header('Location: install-dev/');
+        } else {
+            die('Error: "install" directory is missing');
+        }
+        exit;
     }
 }
 

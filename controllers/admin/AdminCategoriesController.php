@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -227,6 +227,12 @@ class AdminCategoriesControllerCore extends AdminController
 
 
         $categories_tree = array_reverse($categories_tree);
+        if (!empty($categories_tree)) {
+            $link = Context::getContext()->link;
+            foreach ($categories_tree as $k => $tree) {
+                $categories_tree[$k]['edit_link'] = $link->getAdminLink('AdminCategories', true).'&id_category='.(int)$tree['id_category'].'&updatecategory';
+            }
+        }
 
         $this->tpl_list_vars['categories_tree'] = $categories_tree;
         $this->tpl_list_vars['categories_tree_current_id'] = $this->_category->id;
@@ -282,9 +288,12 @@ class AdminCategoriesControllerCore extends AdminController
                 );
             }
         }
+
         // be able to edit the Home category
         if (count(Category::getCategoriesWithoutParent()) == 1 && !Tools::isSubmit('id_category')
-            && ($this->display == 'view' || empty($this->display))) {
+            && ($this->display == 'view' || empty($this->display))
+            && !empty($this->_category)
+        ) {
             $this->toolbar_btn['edit'] = array(
                 'href' => self::$currentIndex.'&update'.$this->table.'&id_category='.(int)$this->_category->id.'&token='.$this->token,
                 'desc' => $this->trans('Edit', array(), 'Admin.Actions')
@@ -304,7 +313,8 @@ class AdminCategoriesControllerCore extends AdminController
             );
         }
         parent::initToolbar();
-        if ($this->_category->id == (int)Configuration::get('PS_ROOT_CATEGORY') && isset($this->toolbar_btn['new'])) {
+
+        if (!empty($this->_category) && $this->_category->id == (int)Configuration::get('PS_ROOT_CATEGORY') && isset($this->toolbar_btn['new'])) {
             unset($this->toolbar_btn['new']);
         }
         // after adding a category
@@ -326,8 +336,13 @@ class AdminCategoriesControllerCore extends AdminController
                 );
             }
         }
-        if (!$this->lite_display && isset($this->toolbar_btn['back']['href']) && $this->_category->level_depth > 1
-            && $this->_category->id_parent && $this->_category->id_parent != (int)Configuration::get('PS_ROOT_CATEGORY')) {
+        if (!$this->lite_display
+            && isset($this->toolbar_btn['back']['href'])
+            && !empty($this->_category)
+            && $this->_category->level_depth > 1
+            && $this->_category->id_parent
+            && $this->_category->id_parent != (int)Configuration::get('PS_ROOT_CATEGORY')
+        ) {
             $this->toolbar_btn['back']['href'] .= '&id_category='.(int)$this->_category->id_parent;
         }
     }

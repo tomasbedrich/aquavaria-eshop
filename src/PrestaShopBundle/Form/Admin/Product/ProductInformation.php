@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -90,6 +90,7 @@ class ProductInformation extends CommonAbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
+        $is_stock_management = $this->configuration->get('PS_STOCK_MANAGEMENT');
         $builder->add('type_product', 'Symfony\Component\Form\Extension\Core\Type\ChoiceType', array(
             'choices'  => array(
                 $this->translator->trans('Standard product', [], 'Admin.Catalog.Feature') => 0,
@@ -203,16 +204,18 @@ class ProductInformation extends CommonAbstractType
             'label' => $this->translator->trans('Retail price with tax', [], 'Admin.Catalog.Feature'),
             'mapped' => false,
             'currency' => $this->currency->iso_code,
-        ))
-        ->add('qty_0_shortcut', 'Symfony\Component\Form\Extension\Core\Type\NumberType', array(
-            'required' => false,
-            'label' => $this->translator->trans('Quantity', [], 'Admin.Catalog.Feature'),
-            'constraints' => array(
-                new Assert\NotBlank(),
-                new Assert\Type(array('type' => 'numeric'))
-            )
-        ))
-        ->add('categories', 'PrestaShopBundle\Form\Admin\Type\ChoiceCategoriesTreeType', array(
+        ));
+        if ($is_stock_management){
+            $builder->add('qty_0_shortcut', 'Symfony\Component\Form\Extension\Core\Type\NumberType', array(
+                'required' => false,
+                'label' => $this->translator->trans('Quantity', [], 'Admin.Catalog.Feature'),
+                'constraints' => array(
+                    new Assert\NotBlank(),
+                    new Assert\Type(array('type' => 'numeric'))
+                )
+            ));
+        }
+        $builder->add('categories', 'PrestaShopBundle\Form\Admin\Type\ChoiceCategoriesTreeType', array(
             'label' => $this->translator->trans('Associated categories', [], 'Admin.Catalog.Feature'),
             'list' => $this->nested_categories,
             'valid_list' => $this->categories,

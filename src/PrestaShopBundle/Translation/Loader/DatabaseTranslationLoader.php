@@ -1,7 +1,7 @@
 <?php
 
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -20,7 +20,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -37,7 +37,7 @@ class DatabaseTranslationLoader implements LoaderInterface
     protected $entityManager;
 
     /**
-     * @param EntityManagerInterface $em
+     * @param EntityManagerInterface $entityManager
      */
     public function __construct(EntityManagerInterface $entityManager)
     {
@@ -47,7 +47,7 @@ class DatabaseTranslationLoader implements LoaderInterface
     /**
      * {@inheritdoc}
      */
-    public function load($resource, $locale, $domain = 'messages')
+    public function load($resource, $locale, $domain = 'messages', $theme = null)
     {
         $lang = $this->entityManager
             ->getRepository('PrestaShopBundle:Lang')
@@ -58,15 +58,28 @@ class DatabaseTranslationLoader implements LoaderInterface
             ->getRepository('PrestaShopBundle:Translation')
         ;
 
-        $translations = $translationRepository
+        $queryBuilder = $translationRepository
             ->createQueryBuilder('t')
             ->where('t.lang =:lang')
-            ->andWhere('t.domain LIKE :domain')
-            ->setParameters(array(
-                'lang' => $lang,
-                'domain' => $domain,
-            ))
-            ->getQuery()
+            ->setParameter('lang', $lang)
+        ;
+
+        if (!is_null($theme)) {
+            $queryBuilder
+                ->andWhere('t.theme = :theme')
+                ->setParameter('theme', $theme)
+            ;
+        } else {
+            $queryBuilder->andWhere('t.theme IS NULL');
+        }
+
+        if ($domain !== '*') {
+            $queryBuilder->andWhere('REGEXP(t.domain, :domain) = true')
+                ->setParameter('domain', $domain)
+            ;
+        }
+
+        $translations = $queryBuilder->getQuery()
             ->getResult()
         ;
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop.
+ * 2007-2016 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2015 PrestaShop SA
+ * @copyright 2007-2016 PrestaShop SA
  * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -40,7 +40,6 @@ class ConfigurationTestCore
         '/pdf/order-return.tpl',
         '/translations/export/index.php',
         '/webservice/dispatcher.php',
-        '/upload/index.php',
         '/index.php',
         '/vendor/autoload.php',
     );
@@ -78,12 +77,15 @@ class ConfigurationTestCore
                 ),
                 'phpversion' => false,
                 'apache_mod_rewrite' => false,
+                'curl' => false,
                 'gd' => false,
                 'pdo_mysql' => false,
                 'config_dir' => 'config',
                 'files' => false,
                 'mails_dir' => 'mails',
+                'openssl' => 'false',
                 'zip' => false,
+                'fileinfo' => false,
             ));
         }
 
@@ -102,7 +104,6 @@ class ConfigurationTestCore
             'new_phpversion' => false,
             'fopen' => false,
             'gz' => false,
-            'mcrypt' => false,
             'mbstring' => false,
             'dom' => false,
             'pdo_mysql' => false,
@@ -185,6 +186,11 @@ class ConfigurationTestCore
         return true;
     }
 
+    public static function test_curl()
+    {
+        return extension_loaded('curl');
+    }
+
     public static function test_gd()
     {
         return function_exists('imagecreatetruecolor');
@@ -202,6 +208,11 @@ class ConfigurationTestCore
     public static function test_zip()
     {
         return extension_loaded('zip');
+    }
+
+    public static function test_fileinfo()
+    {
+        return extension_loaded('fileinfo');
     }
 
     public static function test_dir($relative_dir, $recursive = false, &$full_report = null)
@@ -361,9 +372,9 @@ class ConfigurationTestCore
         return function_exists('mb_strtolower');
     }
 
-    public static function test_mcrypt()
+    public static function test_openssl()
     {
-        return function_exists('mcrypt_encrypt');
+        return function_exists('openssl_encrypt');
     }
 
     public static function test_sessions()
